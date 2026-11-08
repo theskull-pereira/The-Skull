@@ -95,7 +95,22 @@
     }).catch(function (e) { if (!silencioso) $('view').innerHTML = '<div style="height:20px"></div><div class="err">' + esc(errMsg(e)) + '</div>' + sinEnlace(); });
   }
   function sinEnlace() {
-    return '<div class="hero"></div><div class="note"><b>Esta app se abre con tu enlace personal.</b><br>Búscalo en el mensaje privado que te mandó Chiquito por WhatsApp y ábrelo desde ahí. Si lo perdiste, pídele uno nuevo.</div>';
+    setTimeout(enlazarPegado, 0);
+    return '<div class="hero"></div><div class="note"><b>Esta app se abre con tu enlace personal.</b><br>Búscalo en el mensaje privado que te mandó Chiquito por WhatsApp y ábrelo desde ahí. Si lo perdiste, pídele uno nuevo.' +
+      '<div style="margin-top:12px"><b>¿Ya tienes el enlace?</b> Cópialo del mensaje y pégalo aquí:</div>' +
+      '<div class="row" style="flex-wrap:nowrap;margin-top:6px"><input type="text" id="pegaEnlace" placeholder="https://…?t=…" style="flex:1" autocomplete="off" autocapitalize="off" spellcheck="false">' +
+      '<button class="btn small" id="usaEnlace">Entrar</button></div><div class="muted" id="pegaMsg" style="margin-top:6px;font-size:13px"></div></div>';
+  }
+  /* Enlace pegado a mano (cuando la app se abre sin ?t=, por ejemplo desde el icono de la pantalla de inicio). */
+  function enlazarPegado() {
+    var b = $('usaEnlace'), i = $('pegaEnlace'); if (!b || !i) return;
+    function usar() {
+      var txt = (i.value || '').trim(), m = txt.match(/[?&#]t=([A-Za-z0-9_-]+)/) || (/^[A-Za-z0-9_-]{8,}$/.test(txt) ? [0, txt] : null);
+      if (!m) { $('pegaMsg').textContent = 'Eso no parece un enlace de The Skull. Pega el enlace completo del mensaje de Chiquito.'; return; }
+      try { localStorage.setItem('skull_t', m[1]); } catch (e) {}
+      location.replace(location.pathname + '?t=' + m[1]);
+    }
+    b.onclick = usar; i.onkeydown = function (e) { if (e.key === 'Enter') usar(); };
   }
   function render() {
     if (!S) return;
