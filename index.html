@@ -1,16 +1,30 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>The Skull</title>
-<link rel="icon" href="img/favicon-32.png">
-<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
-<style>
-  body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0F0E11;color:#ECE6D8;font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;text-align:center}
-  img{width:160px;height:160px;border-radius:28px}
-  h1{font-size:28px;margin:18px 0 6px} p{color:#A39DA8;margin:0}
-</style>
+<meta name="theme-color" content="#0F0E11">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="The Skull">
+<link rel="apple-touch-icon" href="img/icono_180.png">
+<link rel="icon" type="image/png" sizes="32x32" href="img/icono_32.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Big+Shoulders+Display:wght@700;800&family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="app.css?v=11">
 </head>
-<body><main><img src="img/icono-512.png" alt=""><h1>The Skull</h1><p>La nueva versión de la app está en construcción. 🤘</p></main></body>
+<body>
+<div class="app">
+  <main id="view"><div class="spin"></div></main>
+</div>
+<nav class="tabs" id="tabs" hidden></nav>
+<div class="sheet" id="sheet" hidden><div class="in" id="sheetIn"></div></div>
+<div class="toast" id="toast" hidden></div>
+<script src="config.js?v=11"></script>
+<script src="app.js?v=11"></script>
+</body>
 </html>
