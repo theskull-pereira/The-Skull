@@ -1077,8 +1077,21 @@
   }
 
   /* ---------- inicio ---------- */
+  /* Manifest generado con la dirección personal como start_url (Android/Chrome: «Instalar app» abre directo con el enlace).
+   * En iPhone no se pone manifest: Safari guarda la dirección exacta de la página al añadirla a la pantalla de inicio. */
+  function manifestPersonal() {
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent) || !window.Blob || !window.URL || !URL.createObjectURL) return;
+    var base = location.href.replace(/[^/]*$/, '');
+    var m = { name: CFG.GRUPO || 'The Skull', short_name: CFG.GRUPO || 'The Skull', start_url: location.href, scope: base, display: 'standalone',
+      background_color: '#0F0E11', theme_color: '#0F0E11', lang: 'es',
+      icons: [{ src: base + 'img/icono_192.png', sizes: '192x192', type: 'image/png' }, { src: base + 'img/icono_512.png', sizes: '512x512', type: 'image/png' }] };
+    var link = document.createElement('link'); link.rel = 'manifest';
+    link.href = URL.createObjectURL(new Blob([JSON.stringify(m)], { type: 'application/manifest+json' }));
+    document.head.appendChild(link);
+  }
   function start() {
     TOKEN = leerToken();
+    if (TOKEN) manifestPersonal();
     if (typeof window.SKULL_DEMO === 'function' && !TOKEN) TOKEN = 'demo';
     cargar(false).then(function () {
       var r = new URLSearchParams(location.search).get('r'); if (r && S) abrirRonda(r);
