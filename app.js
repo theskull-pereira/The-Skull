@@ -72,7 +72,8 @@
   function leerToken() {
     var t = new URLSearchParams(location.search).get('t') || '';
     try { if (t) localStorage.setItem('skull_t', t); else t = localStorage.getItem('skull_t') || ''; } catch (e) {}
-    if (location.search.indexOf('t=') >= 0 && history.replaceState) history.replaceState(null, '', location.pathname + location.hash);
+    // El ?t= se queda en la dirección a propósito: así «Añadir a pantalla de inicio» (iPhone y Android) guarda el enlace personal completo.
+    // (El icono de la pantalla de inicio tiene su propio almacén, separado de Safari: sin el ?t= abriría sin enlace.)
     return t;
   }
 
@@ -716,7 +717,7 @@
       h += '<button class="btn ghost" id="vreg">📜 Reglas de The Skull</button>';
       // 6G
       h += '<details class="note"><summary><b>Ponla en la pantalla de inicio</b></summary><div style="margin-top:8px">' +
-        '<b>iPhone (Safari):</b> toca el botón de compartir (el cuadrado con la flecha) y elige «Añadir a pantalla de inicio».<br>' +
+        'Abre primero tu enlace personal (el de WhatsApp) y, desde esa misma página:<br><b>iPhone (Safari):</b> toca el botón de compartir (el cuadrado con la flecha) y elige «Añadir a pantalla de inicio».<br>' +
         '<b>Android (Chrome):</b> toca los tres puntos de arriba a la derecha y elige «Añadir a pantalla de inicio» o «Instalar app».</div></details>' +
         '<div class="note">Este es tu enlace personal: no lo compartas. Si lo pierdes, pídele uno nuevo a Chiquito.</div>' +
         '<p class="foot">' + esc(S.grupo || 'The Skull') + ' · v' + esc(S.version || '1.1') + '</p>';
