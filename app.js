@@ -935,7 +935,8 @@
         var accion = { homenaje: 'Escribe a quién homenajea', proponente: 'Quién la propuso', cumpleanos: 'De quién era el cumpleaños', voto: 'La canción correcta', ganadora: 'La ganadora correcta' }[q.accion];
         h += '<div class="pcard"><div class="k" style="color:var(--gold)">' + esc(q.tipo) + '</div>' + (q.ronda ? '<button class="linkb" data-r="' + esc(q.rid) + '">' + esc(q.ronda) + '</button>' : (q.banda ? '<b>' + esc(q.banda + (q.disco ? ' – ' + q.disco : '')) + '</b>' : '')) +
           '<div style="font-size:14px;margin:4px 0 8px">' + esc(q.detalle) + '</div>' +
-          (accion ? '<div class="row" style="flex-wrap:nowrap"><input type="text" id="qa_' + q.fila + '" placeholder="' + esc(accion) + '"' + (/proponente|cumpleanos/.test(q.accion) ? ' list="dlm"' : '') + ' style="flex:1"><button class="btn small" data-aplicar="' + q.fila + '">Aplicar</button></div>'
+          (accion ? '<div class="row" style="flex-wrap:nowrap"><input type="text" id="qa_' + q.fila + '" placeholder="' + esc(accion) + '"' + (/proponente|cumpleanos/.test(q.accion) ? ' list="dlm"' : '') + ' style="flex:1"><button class="btn small" data-aplicar="' + q.fila + '">Aplicar</button></div>' + (q.accion === 'proponente' ? '<div class="row"><button class="btn small ghost" data-postuma="' + q.fila + '">Es póstuma (decisión colectiva)</button></div>' : '')
+          + ''
             : '<div class="row" style="flex-wrap:nowrap"><input type="text" id="qa_' + q.fila + '" placeholder="Tu respuesta" style="flex:1"><button class="btn small ghost" data-texto="' + q.fila + '">Guardar</button></div>') + '</div>';
       });
       if (ib.avisos) h += '<div class="note"><b>' + ib.avisos + ' avisos de la importación</b> (lo que el cuaderno corrigió del chat y cosas así; solo para leer).<div class="row" style="margin-top:8px"><button class="btn small ghost" id="vav">Ver avisos</button><button class="btn small ghost" id="mav">Marcar todos como vistos</button></div><div id="lav"></div></div>';
@@ -943,6 +944,7 @@
       box.onclick = function (e) {
         var b = e.target.closest('button'); if (!b) return;
         if (b.hasAttribute('data-r')) { abrirRonda(b.getAttribute('data-r')); return; }
+        if (b.hasAttribute('data-postuma')) { ocupado(b); api('api_inboxAnswer', Number(b.getAttribute('data-postuma')), 'Es póstuma (decisión colectiva)', true).then(function () { toast('Listo'); cargar(true).then(function () { panelRevisar(box); }); }).catch(function (er) { toast(errMsg(er)); libre(b); }); return; }
         var fila = b.getAttribute('data-aplicar') || b.getAttribute('data-texto');
         if (fila) { var v = $('qa_' + fila).value.trim(); if (!v) { toast('Escribe la respuesta'); return; } ocupado(b);
           api('api_inboxAnswer', Number(fila), v, b.hasAttribute('data-aplicar')).then(function () { toast('Listo'); cargar(true).then(function () { panelRevisar(box); }); }).catch(function (er) { toast(errMsg(er)); libre(b); }); return; }
