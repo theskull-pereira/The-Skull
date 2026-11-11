@@ -472,7 +472,7 @@
       h += '<div class="list">' + lista.map(function (x, i) {
         var img = x.imagen ? '<img class="th" alt="" loading="lazy" src="' + esc(x.imagen) + '">' : '<span class="th"></span>';
         if (P.modo === 'banda') return '<button class="pick" data-i="' + i + '">' + img + '<span class="a"><b>' + esc(x.nombre) + '</b>' +
-          (x.nombreDiscogs && x.nombreDiscogs !== x.nombre ? '<span>' + esc(x.nombreDiscogs) + '</span>' : '') +
+          (x.pista ? '<span>' + esc(x.pista) + '</span>' : (x.nombreDiscogs && x.nombreDiscogs !== x.nombre ? '<span>' + esc(x.nombreDiscogs) + '</span>' : '')) +
           (x.propuestos ? '<span class="gold">' + x.propuestos + (x.propuestos === 1 ? ' disco ya propuesto' : ' discos ya propuestos') + '</span>' : '') + '</span></button>';
         return '<button class="pick" data-i="' + i + '"' + (x.ya ? ' disabled' : '') + '>' + img + '<span class="a"><b>' + esc(x.titulo) + '</b><span>' + esc(x.banda) + (x.anio ? ' · ' + esc(x.anio) : '') + '</span>' +
           (x.ya ? '<span class="no">' + esc(x.ya.texto) + '</span>' : x.tributo ? '<span class="gold">¿Tributo?</span>' : '') + '</span></button>';
