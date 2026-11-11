@@ -79,10 +79,14 @@
     // También se reintenta una lectura cuando el motor contesta con un fallo pasajero (Discogs ocupado, Google saturado).
     var PASAJERO = /Discogs no responde|lock|bloqueo|Service .*(failed|timed out|invoked too many|unavailable)|try again|Exceeded maximum|Address unavailable/i;
     function espera() { return new Promise(function (ok) { setTimeout(ok, 1500); }); }
+    // Si tarda, se avisa: la app sigue trabajando (no es que no haya conexión)
+    var lento = setTimeout(function () { toast('Esto está tardando más de lo normal… un momento'); }, 7000);
+    var lento2 = setTimeout(function () { toast('Sigue trabajando… no cierres la app'); }, 16000);
     var p = pedir();
     if (lectura) p = p.catch(function () { return espera().then(pedir); })
       .then(function (o) { return (!o.ok && PASAJERO.test(String(o.error || ''))) ? espera().then(pedir) : o; });
-    return p.then(function (o) { if (!o.ok) throw new Error(o.error || 'Algo salió mal'); return o.data; });
+    var fin = function () { clearTimeout(lento); clearTimeout(lento2); };
+    return p.then(function (o) { fin(); if (!o.ok) throw new Error(o.error || 'Algo salió mal'); return o.data; }, function (e) { fin(); throw e; });
   }
   function leerToken() {
     var t = new URLSearchParams(location.search).get('t') || '';
