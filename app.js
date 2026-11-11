@@ -515,7 +515,7 @@
     }
     if (d.tambien && d.tambien.length) {   // otras bandas y nombres del mismo artista
       h += '<div class="note"><b>También con:</b><div class="row" style="margin-top:8px">' + d.tambien.map(function (t) {
-        return '<button class="fchip sm" data-art="' + esc(t.id) + '">' + esc(t.nombre) + '</button>'; }).join('') + '</div></div>';
+        return '<button class="fchip sm" data-art="' + esc(t.id) + '">' + esc(t.nombre) + (t.propuestos ? ' · ' + t.propuestos : '') + '</button>'; }).join('') + '</div></div>';
     }
     var colabs = d.discos.filter(function (x) { return x.valido && !x.ya && x.colab; });
     var validos = d.discos.filter(function (x) { return x.valido && !x.ya && !x.colab; }), yaP = d.discos.filter(function (x) { return x.ya; }),
@@ -529,7 +529,14 @@
     };
     h += '<span class="k sec-t">Para proponer · ' + validos.length + '</span>' + (validos.length ? '<div class="list">' + validos.map(fila).join('') + '</div>' : '<div class="note">De esta banda ya no quedan discos de estudio sin proponer.</div>');
     if (colabs.length) h += '<details class="note"><summary>Colaboraciones · ' + colabs.length + '</summary><div class="list" style="margin-top:6px">' + colabs.map(fila).join('') + '</div></details>';
-    if (yaP.length) h += '<details class="note"><summary>Ya propuestos · ' + yaP.length + '</summary><div class="list" style="margin-top:6px">' + yaP.map(fila).join('') + '</div></details>';
+    // Lo ya propuesto con sus otras bandas y nombres (en Discogs van aparte): que se vea aquí también
+    var rel = [];
+    (d.tambien || []).forEach(function (t) { (t.rondas || []).forEach(function (r) { rel.push({ r: r, con: t.nombre }); }); });
+    var filaRel = function (x) {
+      return '<div class="pick" style="cursor:default"><span class="th"></span><span class="a"><b>' + esc(x.r.disco) + '</b><span>con ' + esc(x.con) + '</span>' +
+        '<span class="no">Ya propuesto' + (x.r.numero ? ' en la #' + esc(x.r.numero) : '') + (x.r.ganadora ? ' · ganó «' + esc(x.r.ganadora) + '»' : (x.r.estado !== 'cerrada' ? ' · se está votando' : '')) + '</span></span></div>';
+    };
+    if (yaP.length || rel.length) h += '<details class="note"' + (rel.length ? ' open' : '') + '><summary>Ya propuestos · ' + (yaP.length + rel.length) + '</summary><div class="list" style="margin-top:6px">' + yaP.map(fila).join('') + rel.map(filaRel).join('') + '</div></details>';
     if (otros.length) h += '<details class="note"><summary>Otros que no valen · ' + otros.length + '</summary><div class="list" style="margin-top:6px">' + otros.map(fila).join('') + '</div></details>';
     if (d.fuente === 'Discogs') h += '<a class="dgs" target="_blank" rel="noopener" href="' + esc(a.discogs || 'https://www.discogs.com') + '">Data provided by Discogs.</a>';
     h += '<button class="linkb" id="manual">No está el disco: escribirlo a mano</button>';
