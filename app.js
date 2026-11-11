@@ -4,6 +4,7 @@
   var CFG = window.SKULL_CONFIG || {};
   var ABST = '(abstención)';
   var TOKEN = '', S = null, TAB = 'inicio', CUR = null, SEL = '', EDIT = false;
+  var GAL = [];   // fotos del álbum que se están mostrando (galería)
 
   /* ---------- utilidades ---------- */
   function $(id) { return document.getElementById(id); }
@@ -61,13 +62,27 @@
   }
 
   /* ---------- conexión con el motor ---------- */
+  var LECTURAS = ['api_state', 'api_round', 'api_historial', 'api_playlist', 'api_delCuaderno', 'api_portadas', 'api_stats11', 'api_me', 'api_buscarBanda',
+    'api_buscarDisco', 'api_discografia', 'api_edicion', 'api_miembros', 'api_ajustes', 'api_mensajes', 'api_mensaje11', 'api_log', 'api_inbox', 'api_roundEditInfo'];
   function api(fn) {
     var args = [TOKEN].concat(Array.prototype.slice.call(arguments, 1));
     if (typeof window.SKULL_DEMO === 'function') return Promise.resolve().then(function () { return window.SKULL_DEMO(fn, args); });
     if (!CFG.MOTOR) return Promise.reject(new Error('La app todavía no está conectada.'));
-    return fetch(CFG.MOTOR, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: fn, args: args }) })
-      .then(function (res) { if (!res.ok) throw new Error('No hay conexión con la app (' + res.status + '). Inténtalo de nuevo.'); return res.json(); })
-      .then(function (o) { if (!o.ok) throw new Error(o.error || 'Algo salió mal'); return o.data; });
+    var lectura = LECTURAS.indexOf(fn) >= 0;
+    function pedir() {
+      return fetch(CFG.MOTOR, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: fn, args: args }) })
+        .then(function (res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+        .catch(function (e) { var x = new Error(lectura ? 'No hay conexión con la app en este momento. Inténtalo de nuevo.' : 'La app no respondió. Espera unos segundos y vuelve a intentarlo.'); x.red = true; throw x; });
+    }
+    // Fallos de conexión (no errores de la app): las pantallas que solo leen se reintentan solas una vez.
+    // Las acciones (votar, proponer, cerrar…) nunca se repiten solas, para que nada se mande dos veces.
+    // También se reintenta una lectura cuando el motor contesta con un fallo pasajero (Discogs ocupado, Google saturado).
+    var PASAJERO = /Discogs no responde|lock|bloqueo|Service .*(failed|timed out|invoked too many|unavailable)|try again|Exceeded maximum|Address unavailable/i;
+    function espera() { return new Promise(function (ok) { setTimeout(ok, 1500); }); }
+    var p = pedir();
+    if (lectura) p = p.catch(function () { return espera().then(pedir); })
+      .then(function (o) { return (!o.ok && PASAJERO.test(String(o.error || ''))) ? espera().then(pedir) : o; });
+    return p.then(function (o) { if (!o.ok) throw new Error(o.error || 'Algo salió mal'); return o.data; });
   }
   function leerToken() {
     var t = new URLSearchParams(location.search).get('t') || '';
@@ -92,7 +107,15 @@
     if (!TOKEN) { $('view').innerHTML = sinEnlace(); return Promise.resolve(); }
     return api('api_state').then(function (st) {
       S = st; if (!silencioso || !$('tabs').innerHTML) tabs(); if (!silencioso || TAB === 'inicio') render();
-    }).catch(function (e) { if (!silencioso) $('view').innerHTML = '<div style="height:20px"></div><div class="err">' + esc(errMsg(e)) + '</div>' + sinEnlace(); });
+    }).catch(function (e) {
+      if (silencioso) return;
+      if (e && e.red) {   // fallo de conexión: no es problema del enlace
+        $('view').innerHTML = '<div class="hero"></div><div class="err">' + esc(errMsg(e)) + '</div><button class="btn" id="reint">Reintentar</button>';
+        $('reint').onclick = function () { $('view').innerHTML = '<div class="hero"></div><div class="spin"></div>'; cargar(); };
+        return;
+      }
+      $('view').innerHTML = '<div style="height:20px"></div><div class="err">' + esc(errMsg(e)) + '</div>' + sinEnlace();
+    });
   }
   function sinEnlace() {
     setTimeout(enlazarPegado, 0);
@@ -126,14 +149,14 @@
 
   /* ---------- Inicio ---------- */
   function estadoChip(r) {
-    if (r.estado === 'whatsapp') return '<span class="chip grey">WhatsApp</span>';
+    if (r.estado === 'whatsapp' && !(r.canciones >= 2)) return '<span class="chip grey">WhatsApp</span>';
     if (r.estado === 'desempate') return '<span class="chip gold">Empate</span>';
     if (r.miVoto === ABST) return '<span class="chip grey">Te abstuviste</span>';
     if (r.miVoto) return '<span class="chip done">Votaste</span>';
     return '<span class="chip go">Votar</span>';
   }
   function limite(r) {
-    if (r.estado === 'whatsapp') return '<span class="lim">Se está votando en el chat</span>';
+    if (r.estado === 'whatsapp') return '<span class="lim">' + (r.canciones >= 2 ? 'Se vota en el chat y aquí' : 'Se está votando en el chat') + '</span>';
     if (!r.fecha_limite) return '';
     var d = diasHasta(r.fecha_limite);
     if (d === null) return '';
@@ -268,12 +291,11 @@
   function dibujarRonda(extra) {
     var r = CUR, h = topHoja(r);
     if (r.canciones && r.canciones.length) r.canciones = ordenDisco(r.canciones);
-    var abierta = r.estado === 'abierta';
+    var abierta = r.estado === 'abierta' || (r.estado === 'whatsapp' && !!r.votaEnApp);   // las abiertas en WhatsApp también se votan aquí
     // 2C: número en la cabecera
     var imgs = r.imagenes || [];
     if (imgs.length) {
-      h += '<div class="big"><img alt="Portada de ' + esc(r.disco) + '" src="' + esc(imgs[0].uri) + '" data-g="0"><span class="nb">#' + esc(r.numero) + '</span></div>';
-      if (imgs.length > 1) h += '<div class="gal">' + imgs.map(function (x, i) { return '<img alt="" loading="lazy" src="' + esc(x.uri150 || x.uri) + '" data-g="' + i + '">'; }).join('') + '</div>';
+      h += galHtml(imgs, r.numero, 'Portada de ' + r.disco);
       h += '<a class="dgs" target="_blank" rel="noopener" href="' + esc(r.discogs_url || 'https://www.discogs.com') + '">Data provided by Discogs.</a>';
     }
     h += '<div class="rhead">' + (imgs.length ? '' : cover(r, true)) + '<div class="ci"><span class="b">' + esc(r.banda) + '</span><span class="t">' + esc(r.disco || ('Homenaje a ' + r.homenaje)) + '</span>' +
@@ -289,7 +311,7 @@
 
     var arr = conteo(r), totalVotos = (r.lista || []).filter(function (x) { return x.estado === 'voto'; }).length;
     if (abierta || r.estado === 'whatsapp') {
-      var lim = r.fecha_limite ? 'Se cierra a más tardar el ' + fLarga(r.fecha_limite) : (r.estado === 'whatsapp' ? 'Se está votando en WhatsApp' : '');
+      var lim = r.fecha_limite ? 'Se cierra a más tardar el ' + fLarga(r.fecha_limite) : (r.estado === 'whatsapp' ? (r.votaEnApp ? 'Se vota en el chat y aquí' : 'Se está votando en WhatsApp') : '');
       h += '<div class="status"><span class="muted">' + esc(lim) + '</span><span class="num" style="color:var(--bone)">' + totalVotos + ' de ' + (r.lista || []).length + '</span></div>';
     }
     if (extra) h += extra;
@@ -347,7 +369,7 @@
       var b = $('vb'); b.disabled = SEL === CUR.miVoto; b.textContent = (SEL === CUR.miVoto ? 'Ya votaste por ' : 'Votar por ') + SEL;
     };
     var vb = $('vb'); if (vb) vb.onclick = function () { votar(SEL, vb); };
-    $('sheetIn').querySelectorAll('[data-g]').forEach(function (im) { im.onclick = function () { verFoto(Number(im.getAttribute('data-g'))); }; });
+    galWire();
     var ab = $('ab'); if (ab) ab.onclick = function () { votar(ABST, ab); };
     var cv = $('cv'); if (cv) cv.onclick = function () { EDIT = true; dibujarRonda(); };
     $('sheetIn').querySelectorAll('[data-emp]').forEach(function (b) {
@@ -364,13 +386,58 @@
       };
     });
   }
-  /** Galería: la foto a pantalla completa; tocar pasa a la siguiente, la ✕ cierra. */
+  /**
+   * Galería de fotos del álbum (pantalla de la propuesta y Proponer). Cada foto es un botón (en el iPhone un toque
+   * sobre una imagen suelta no siempre llega); una foto que no carga se intenta una vez más y, si falla, se quita.
+   */
+  function galHtml(imgs, numero, alt) {
+    GAL = imgs || [];
+    if (!GAL.length) return '';
+    var h = '<div class="big"><button type="button" class="gt" data-g="0" aria-label="Ver las fotos"><img alt="' + esc(alt || '') + '" src="' + esc(GAL[0].uri) + '"></button>' +
+      (numero ? '<span class="nb">#' + esc(numero) + '</span>' : '') + (GAL.length > 1 ? '<span class="nf">' + GAL.length + ' fotos</span>' : '') + '</div>';
+    if (GAL.length > 1) h += '<div class="gal">' + GAL.map(function (x, i) {
+      return '<button type="button" class="gt" data-g="' + i + '" aria-label="Foto ' + (i + 1) + '"><img alt="" src="' + esc(x.uri150 || x.uri) + '"></button>'; }).join('') + '</div>';
+    return h;
+  }
+  function galWire() {
+    $('sheetIn').querySelectorAll('.gt[data-g]').forEach(function (b) {
+      b.onclick = function (e) { e.preventDefault(); verFoto(Number(b.getAttribute('data-g'))); };
+      var im = b.querySelector('img');
+      if (im) im.onerror = function () {
+        if (!im.getAttribute('data-re')) { im.setAttribute('data-re', '1'); var u = im.src; setTimeout(function () { im.src = u; }, 900); return; }
+        if (b.parentNode && b.parentNode.classList.contains('gal')) b.remove();
+      };
+    });
+  }
+  /** La foto a pantalla completa: tocar la foto o › pasa a la siguiente, ‹ vuelve, deslizar también; la ✕ cierra. */
   function verFoto(i) {
-    var imgs = CUR.imagenes || []; if (!imgs.length) return;
+    var imgs = GAL || []; if (!imgs.length) return;
+    var viejo = document.querySelector('.lightbox'); if (viejo) viejo.remove();
     var d = document.createElement('div'); d.className = 'lightbox';
-    var pinta = function () { d.innerHTML = '<button class="x" aria-label="Cerrar">✕</button><img alt="" src="' + esc(imgs[i].uri) + '"><span class="k">' + (i + 1) + ' de ' + imgs.length + '</span>'; };
+    var varias = imgs.length > 1;
+    d.innerHTML = '<button type="button" class="x" aria-label="Cerrar">✕</button>' +
+      (varias ? '<button type="button" class="nav prev" aria-label="Anterior">‹</button><button type="button" class="nav next" aria-label="Siguiente">›</button>' : '') +
+      '<img alt=""><span class="k cnt"></span>';
+    var im = d.querySelector('img'), cnt = d.querySelector('.cnt'), reintento = false;
+    function pinta() { reintento = false; cnt.textContent = (i + 1) + ' de ' + imgs.length; im.style.opacity = '.35'; im.src = imgs[i].uri || imgs[i].uri150; }
+    function mueve(n) { if (!varias) return; i = (i + n + imgs.length) % imgs.length; pinta(); }
+    im.onload = function () { im.style.opacity = '1'; };
+    im.onerror = function () {
+      if (!reintento) { reintento = true; var u = imgs[i].uri150 || imgs[i].uri; setTimeout(function () { im.src = u; }, 700); return; }
+      cnt.textContent = (i + 1) + ' de ' + imgs.length + ' · esta foto no cargó';
+    };
+    d.onclick = function (e) {
+      if (e.target.closest('.x') || e.target === d) { d.remove(); return; }
+      if (e.target.closest('.prev')) { mueve(-1); return; }
+      if (e.target.closest('.next') || e.target === im) { varias ? mueve(1) : d.remove(); }
+    };
+    var x0 = null;
+    d.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
+    d.addEventListener('touchend', function (e) {
+      if (x0 === null) return; var dx = e.changedTouches[0].clientX - x0; x0 = null;
+      if (Math.abs(dx) > 45) { mueve(dx < 0 ? 1 : -1); e.preventDefault(); }
+    });
     pinta(); document.body.appendChild(d);
-    d.onclick = function (e) { if (e.target.closest('.x')) { d.remove(); return; } i = (i + 1) % imgs.length; pinta(); };
   }
   function votar(cancion, boton) {
     var txt = boton.textContent; boton.disabled = true; boton.textContent = 'Guardando…';
@@ -446,16 +513,22 @@
       h += '<details class="note"><summary><b>' + esc(d.historial.texto) + '</b></summary><div class="list who-l hl2" style="margin-top:6px">' +
         d.historial.rondas.map(function (r) { return '<div class="li"><span class="nm"><span class="num">#' + esc(r.numero) + '</span> ' + esc(r.disco) + '</span><span class="sg w">' + esc(r.ganadora || (r.estado !== 'cerrada' ? 'se está votando' : '')) + '</span></div>'; }).join('') + '</div></details>';
     }
-    var validos = d.discos.filter(function (x) { return x.valido && !x.ya; }), yaP = d.discos.filter(function (x) { return x.ya; }),
+    if (d.tambien && d.tambien.length) {   // otras bandas y nombres del mismo artista
+      h += '<div class="note"><b>También con:</b><div class="row" style="margin-top:8px">' + d.tambien.map(function (t) {
+        return '<button class="fchip sm" data-art="' + esc(t.id) + '">' + esc(t.nombre) + '</button>'; }).join('') + '</div></div>';
+    }
+    var colabs = d.discos.filter(function (x) { return x.valido && !x.ya && x.colab; });
+    var validos = d.discos.filter(function (x) { return x.valido && !x.ya && !x.colab; }), yaP = d.discos.filter(function (x) { return x.ya; }),
       otros = d.discos.filter(function (x) { return !x.valido && !x.ya; });
     var TIPOS = { estudio: '', sin_confirmar: 'por confirmar', recopilatorio: 'recopilatorio', en_vivo: 'en vivo', 'en vivo': 'en vivo', ep: 'EP', sencillo: 'sencillo' };
     var tipoTxt = function (t) { return TIPOS[t] !== undefined ? TIPOS[t] : String(t || '').replace(/_/g, ' '); };
     var fila = function (x, i) {
       var nota = x.ya ? '<span class="no">' + esc(x.ya.texto) + '</span>' : (!x.valido ? '<span class="muted">No vale: ' + esc(tipoTxt(x.tipo)) + '</span>' : (x.tributo ? '<span class="gold">¿Tributo? Lo revisa Chiquito</span>' : (x.confirmar ? '<span class="gold">Revisa que sea de estudio</span>' : '')));
       return '<button class="pick" data-id="' + esc(x.id) + '"' + (x.ya || !x.valido ? ' disabled' : '') + '>' + (x.imagen ? '<img class="th" alt="" loading="lazy" src="' + esc(x.imagen) + '">' : '<span class="th"></span>') +
-        '<span class="a"><b>' + esc(x.titulo) + '</b><span>' + esc([x.anio, tipoTxt(x.tipo)].filter(Boolean).join(' · ')) + '</span>' + nota + '</span></button>';
+        '<span class="a"><b>' + esc(x.titulo) + '</b><span>' + esc([x.colab ? x.banda : '', x.anio, tipoTxt(x.tipo)].filter(Boolean).join(' · ')) + '</span>' + nota + '</span></button>';
     };
     h += '<span class="k sec-t">Para proponer · ' + validos.length + '</span>' + (validos.length ? '<div class="list">' + validos.map(fila).join('') + '</div>' : '<div class="note">De esta banda ya no quedan discos de estudio sin proponer.</div>');
+    if (colabs.length) h += '<details class="note"><summary>Colaboraciones · ' + colabs.length + '</summary><div class="list" style="margin-top:6px">' + colabs.map(fila).join('') + '</div></details>';
     if (yaP.length) h += '<details class="note"><summary>Ya propuestos · ' + yaP.length + '</summary><div class="list" style="margin-top:6px">' + yaP.map(fila).join('') + '</div></details>';
     if (otros.length) h += '<details class="note"><summary>Otros que no valen · ' + otros.length + '</summary><div class="list" style="margin-top:6px">' + otros.map(fila).join('') + '</div></details>';
     if (d.fuente === 'Discogs') h += '<a class="dgs" target="_blank" rel="noopener" href="' + esc(a.discogs || 'https://www.discogs.com') + '">Data provided by Discogs.</a>';
@@ -463,6 +536,7 @@
     abrirHoja(h);
     $('back').onclick = function () { pasoBuscar(P.res); };
     $('manual').onclick = function () { pasoManual({ banda: a.nombre }); };
+    $('sheetIn').querySelectorAll('[data-art]').forEach(function (b) { b.onclick = function () { cargarDiscografia(b.getAttribute('data-art')); }; });
     $('sheetIn').querySelectorAll('.pick[data-id]').forEach(function (b) {
       b.onclick = function () { cargarEdicion(d.discos.filter(function (x) { return x.id === b.getAttribute('data-id'); })[0]); };
     });
@@ -479,8 +553,8 @@
     if (!e.encontrada) { pasoManual({ banda: e.banda || (P.artista && P.artista.nombre), disco: e.disco || x.titulo, anio: e.anio || x.anio, nota: e.nota }); return; }
     var img = e.portada || x.imagen || '';
     var h = topProp(tituloTipo(), true);
-    if (img) h += '<div class="big"><img alt="" src="' + esc(img) + '"></div>';
-    if (e.fotos && e.fotos.length > 1) h += '<div class="gal">' + e.fotos.map(function (f) { return '<img alt="" loading="lazy" src="' + esc(f.uri150) + '">'; }).join('') + '</div>';
+    var fotosEd = (e.fotos && e.fotos.length) ? e.fotos : (img ? [{ uri: img, uri150: img }] : []);
+    h += galHtml(fotosEd, '', 'Portada de ' + (e.disco || ''));
     h += '<div class="ci"><span class="b">' + esc(e.banda) + '</span><span class="t" style="font-family:var(--f-head);font-weight:800;font-size:28px;text-transform:uppercase;line-height:1.05">' + esc(e.disco) + '</span>' +
       '<span class="m">' + esc([P.artista && P.artista.pais, e.anio].filter(Boolean).join(' · ')) + '</span></div>';
     h += '<div class="note"><b>Edición:</b> ' + esc(e.descripcion || '') + (e.alternativas && e.alternativas.length ? '<br><button class="linkb" id="alts" style="margin-top:6px">¿No es esta edición? Ver otras (' + e.alternativas.length + ')</button>' : '') + '</div>';
@@ -494,6 +568,7 @@
       '<label class="f">Enlace de Spotify o YouTube (opcional)<input type="text" id="lnk" placeholder="Pega aquí el enlace" value="' + esc(P.lnk || '') + '"></label>' +
       '<button class="btn" id="go">Proponer «' + esc(e.disco) + '»</button>';
     abrirHoja(h);
+    galWire();
     $('back').onclick = function () { P.disco ? pasoDiscos() : pasoBuscar(P.res); };
     var alts = $('alts');
     if (alts) alts.onclick = function () {
@@ -810,12 +885,12 @@
     if (!S.abiertas.length) h += '<div class="note">No hay votaciones abiertas.</div>';
     S.abiertas.filter(function (r) { return r.estado !== 'desempate'; }).forEach(function (r) {
       var lista = r.todosVotaron ? '<span class="chip done">Todos votaron · ¿cerrar?</span>' : (r.listaParaCerrar ? '<span class="chip gold">Lista para cerrar</span>' : '');
-      var lim = r.fecha_limite ? 'Se cierra sola el ' + fCorta(r.fecha_limite) + (r.prorroga ? ' (con prórroga)' : '') : (r.estado === 'whatsapp' ? 'Se vota en WhatsApp · ' + r.diasAbierta + ' días abierta' : '');
+      var lim = r.fecha_limite ? 'Se cierra sola el ' + fCorta(r.fecha_limite) + (r.prorroga ? ' (con prórroga)' : '') : (r.estado === 'whatsapp' ? (r.canciones >= 2 ? 'Se vota en el chat y en la app · ' : 'Se vota en WhatsApp · ') + r.diasAbierta + ' días abierta' : '');
       h += '<div class="pcard"><div class="pc-h"><span class="num">#' + esc(r.numero) + '</span> <b>' + esc(r.banda) + '</b> · ' + esc(r.disco) + ' ' + lista + '</div>' +
         '<div class="muted" style="font-size:13px">' + r.votaron + ' de ' + r.total + ' votaron' + (lim ? ' · ' + esc(lim) : '') + '</div>' +
         (r.faltan && r.faltan.length ? '<div class="faltan">Faltan: <b>' + esc(r.faltan.join(', ')) + '</b></div>' : '') +
         '<div class="row" style="margin-top:8px">' +
-        (r.estado === 'whatsapp' ? '<button class="btn small" data-wa="' + esc(r.id) + '">Registrar resultado del chat</button>'
+        (r.estado === 'whatsapp' ? (r.canciones >= 2 ? '<button class="btn small" data-cerrar="' + esc(r.id) + '">Cerrar votación</button>' : '') + '<button class="btn small' + (r.canciones >= 2 ? ' ghost' : '') + '" data-wa="' + esc(r.id) + '">Registrar resultado del chat</button>'
           : '<button class="btn small" data-cerrar="' + esc(r.id) + '">Cerrar votación</button>' + (r.prorroga ? '' : '<button class="btn small ghost" data-prorroga="' + esc(r.id) + '">+3 días</button>')) +
         '<button class="btn small ghost" data-recordar="' + esc(r.id) + '">Recordatorio</button><button class="btn small ghost" data-r="' + esc(r.id) + '">Ver</button></div>' +
         '<div class="wa-box" id="wa_' + esc(r.id) + '" hidden><label class="f">Pega aquí el resultado como lo escribes en el chat (una línea por canción: «Canción   número»)<textarea id="wat_' + esc(r.id) + '" style="min-height:150px"></textarea></label><button class="btn small" data-wago="' + esc(r.id) + '">Guardar y cerrar</button></div></div>';
