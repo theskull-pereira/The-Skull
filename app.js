@@ -856,7 +856,7 @@
   function vistaPanel() {
     var v = $('view'), a = S.admin || {};
     v.innerHTML = '<div class="pagehead"><h2>Panel</h2><span class="k">' + esc(S.me.nombre) + (S.me.esTecnico ? ' · admin técnico' : ' · admin') + '</span></div>' +
-      seccion('hoy', 'Hoy') + seccion('revisar', 'Por revisar', a.porRevisar ? '<span class="chip go">' + a.porRevisar + '</span>' : '') +
+      seccion('hoy', 'Hoy') + seccion('revisar', 'Por revisar', a.porRevisar ? '<span class="chip go" id="chipRev">' + a.porRevisar + '</span>' : '') +
       seccion('turnos', 'Turnos y cumpleaños') + seccion('miembros', 'Miembros y enlaces') + seccion('datos', 'Datos') + seccion('ajustes', 'Ajustes') +
       '<p class="foot">' + esc(S.grupo || 'The Skull') + ' · v' + esc(S.version || '1.1') + '</p>';
     v.onclick = null;
@@ -929,6 +929,8 @@
   // Por revisar (7F)
   function panelRevisar(box) {
     api('api_inbox').then(function (ib) {
+      // 12-nov: el número del Panel se pone al día con lo que de verdad queda (algunas preguntas se cierran solas al abrir la bandeja)
+      var chipRev = $('chipRev'); if (chipRev) { if (ib.preguntas.length) chipRev.textContent = ib.preguntas.length; else chipRev.style.display = 'none'; }
       var dl = '<datalist id="dlm">' + (ib.miembros || []).map(function (m) { return '<option value="' + esc(m) + '">'; }).join('') + '</datalist>';
       var h = dl + (ib.preguntas.length ? '' : '<div class="note">No hay nada por revisar. 🤘</div>');
       ib.preguntas.forEach(function (q) {
