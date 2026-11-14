@@ -111,12 +111,15 @@
     return t;
   }
 
+  /* Iconos: Tabler Icons (licencia MIT, © Paweł Kuna). Trazos sencillos que toman el color del texto. */
+  var ICO = {"books":["M5 5a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1l0 -14","M9 5a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1l0 -14","M5 8h4","M9 16h4","M13.803 4.56l2.184 -.53c.562 -.135 1.133 .19 1.282 .732l3.695 13.418a1.02 1.02 0 0 1 -.634 1.219l-.133 .041l-2.184 .53c-.562 .135 -1.133 -.19 -1.282 -.732l-3.695 -13.418a1.02 1.02 0 0 1 .634 -1.219l.133 -.041","M14 9l4 -1","M16 16l3.923 -.98"],"cake":["M3 20h18v-8a3 3 0 0 0 -3 -3h-12a3 3 0 0 0 -3 3v8","M3 14.803c.312 .135 .654 .204 1 .197a2.4 2.4 0 0 0 2 -1a2.4 2.4 0 0 1 2 -1a2.4 2.4 0 0 1 2 1a2.4 2.4 0 0 0 2 1a2.4 2.4 0 0 0 2 -1a2.4 2.4 0 0 1 2 -1a2.4 2.4 0 0 1 2 1a2.4 2.4 0 0 0 2 1c.35 .007 .692 -.062 1 -.197","M12 4l1.465 1.638a2 2 0 1 1 -3.015 .099l1.55 -1.737"],"chart_bar":["M3 13a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -6","M15 9a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -10","M9 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -14","M4 20h14"],"crown":["M12 6l4 6l5 -4l-2 10h-14l-2 -10l5 4l4 -6"],"flame":["M12 10.941c2.333 -3.308 .167 -7.823 -1 -8.941c0 3.395 -2.235 5.299 -3.667 6.706c-1.43 1.408 -2.333 3.294 -2.333 5.588c0 3.704 3.134 6.706 7 6.706c3.866 0 7 -3.002 7 -6.706c0 -1.712 -1.232 -4.403 -2.333 -5.588c-2.084 3.353 -3.257 3.353 -4.667 2.235"],"skull":["M12 4c4.418 0 8 3.358 8 7.5c0 1.901 -.755 3.637 -2 4.96l0 2.54a1 1 0 0 1 -1 1h-10a1 1 0 0 1 -1 -1v-2.54c-1.245 -1.322 -2 -3.058 -2 -4.96c0 -4.142 3.582 -7.5 8 -7.5","M10 17v3","M14 17v3","M8 11a1 1 0 1 0 2 0a1 1 0 1 0 -2 0","M14 11a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"],"trophy":["M8 21l8 0","M12 17l0 4","M7 4l10 0","M17 4v8a5 5 0 0 1 -10 0v-8","M3 9a2 2 0 1 0 4 0a2 2 0 1 0 -4 0","M17 9a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"],"user":["M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0","M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"],"vinyl":["M16 3.937a9 9 0 1 0 5 8.063","M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0","M19 4a1 1 0 1 0 2 0a1 1 0 1 0 -2 0","M20 4l-3.5 10l-2.5 2"]};
+  function ico(n, cls) { var p = ICO[n] || []; return '<svg class="ico' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p.map(function (d) { return '<path d="' + d + '"/>'; }).join('') + '</svg>'; }
   /* ---------- arranque y pestañas ---------- */
   function tabs() {
     var t = [['inicio', 'Inicio'], ['historial', 'Historial'], ['numeros', 'Números'], ['yo', 'Yo']];
     if (S.me.esAdmin) t.push(['panel', 'Panel']);   // 6F: barra de 5 para los admins
     var n = $('tabs'); n.style.setProperty('--n', t.length);
-    n.innerHTML = t.map(function (x) { return '<button data-tab="' + x[0] + '"' + (x[0] === TAB ? ' class="on"' : '') + '><i></i>' + x[1] + '</button>'; }).join('');
+    n.innerHTML = t.map(function (x) { return '<button data-tab="' + x[0] + '"' + (x[0] === TAB ? ' class="on"' : '') + '>' + ico({ inicio: 'skull', historial: 'vinyl', numeros: 'chart_bar', yo: 'user', panel: 'crown' }[x[0]]) + '<i></i>' + x[1] + '</button>'; }).join('');
     n.hidden = false;
     n.querySelectorAll('button').forEach(function (b) {
       b.onclick = function () { TAB = b.getAttribute('data-tab'); n.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); render(); };
@@ -144,6 +147,18 @@
       $('view').innerHTML = '<div style="height:20px"></div><div class="err">' + esc(errMsg(e)) + '</div>' + sinEnlace();
     });
   }
+  /* Que lo que hace otro (cerrar, cancelar, votar) se vea sin tener que cerrar la app (14-nov):
+   * se vuelve a pedir el estado al volver a la app y cada 2 minutos mientras está a la vista. */
+  var ULT_REFRESCO = 0;
+  function refrescar() {
+    if (!TOKEN || !S || document.hidden || Date.now() - ULT_REFRESCO < 20000) return;
+    ULT_REFRESCO = Date.now();
+    cargar(true);
+  }
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) refrescar(); });
+  window.addEventListener('focus', refrescar);
+  window.addEventListener('pageshow', refrescar);
+  setInterval(refrescar, 120000);
   function sinEnlace() {
     setTimeout(enlazarPegado, 0);
     return '<div class="hero"></div><div class="note"><b>Esta app se abre con tu enlace personal.</b><br>Búscalo en el mensaje privado que te mandó Chiquito por WhatsApp y ábrelo desde ahí. Si lo perdiste, pídele uno nuevo.' +
@@ -182,14 +197,9 @@
     if (r.miVoto) return '<span class="chip done">Votaste</span>';
     return '<span class="chip go">Votar</span>';
   }
-  function limite(r) {
+  function limite(r) {   // 14-nov (Carlos): ya no hay fecha límite; no se muestra ninguna fecha de cierre
     if (r.estado === 'whatsapp') return '<span class="lim">' + (r.canciones >= 2 ? 'Se vota en el chat y aquí' : 'Se está votando en el chat') + '</span>';
-    if (!r.fecha_limite) return '';
-    var d = diasHasta(r.fecha_limite);
-    if (d === null) return '';
-    if (d <= 0) return '<span class="lim hot">Se cierra hoy</span>';
-    if (d === 1) return '<span class="lim hot">Se cierra mañana</span>';
-    return '<span class="lim">Cierre previsto: ' + esc(fCorta(r.fecha_limite)) + '</span>';
+    return '';
   }
   function tarjeta(r) {
     var pct = r.total ? Math.round(r.votaron * 100 / r.total) : 0;
@@ -230,7 +240,7 @@
     var falta = function (r) { return r.estado === 'abierta' && !r.miVoto ? 0 : 1; };
     abiertas.sort(function (a, b) { return falta(a) - falta(b) || (parseInt(b.numero, 10) || 0) - (parseInt(a.numero, 10) || 0); });
     if (abiertas.length) {
-      h += '<span class="k sec-t">Votando ahora · ' + abiertas.length + '</span>';
+      h += '<span class="k sec-t">' + ico('flame') + 'Votando ahora · ' + abiertas.length + '</span>';
       abiertas.forEach(function (r) { h += tarjeta(r); });
     } else if (S.ultima) {   // 1C
       var u = S.ultima;
@@ -239,10 +249,10 @@
         '<span class="win">' + esc(u.ganadora) + '</span><span class="muted" style="font-size:13px">' + esc([quien(u), origen(u)].filter(Boolean).join(' · ')) + '</span></button>';
     }
     // 1D: sin «Abiertas: N normales…» (eso va al Panel)
-    if (S.colaCumples.length) h += '<div class="note"><dl class="facts"><dt>Cola de cumpleaños</dt><dd>' + esc(S.colaCumples.join(', ')) + '</dd></dl></div>';
+    if (S.colaCumples.length) h += '<div class="note"><dl class="facts"><dt>' + ico('cake') + 'Cola de cumpleaños</dt><dd>' + esc(S.colaCumples.join(', ')) + '</dd></dl></div>';
     if (abiertas.length && S.ultima) {
       var w = S.ultima;
-      h += '<button class="note" data-r="' + esc(w.id) + '" style="text-align:left;cursor:pointer;border-style:solid">Lo último que se cerró: <span class="num">#' + esc(w.numero) + '</span> ' + esc(w.banda) +
+      h += '<button class="note" data-r="' + esc(w.id) + '" style="text-align:left;cursor:pointer;border-style:solid">' + ico('trophy') + 'Lo último que se cerró: <span class="num">#' + esc(w.numero) + '</span> ' + esc(w.banda) +
         ' → <b style="color:var(--gold)">' + esc(w.ganadora) + '</b></button>';
     }
     if (S.playlists && (S.playlists.spotify || S.playlists.youtube)) h += '<div class="plb"><div class="plb-t">🎧 ¡Escucha la playlist!</div><div class="plb-s">Todas las ganadoras de The Skull, en una sola lista</div><div class="row">' +
@@ -287,7 +297,7 @@
   /* ---------- Ronda: votar y resultado ---------- */
   function abrirHoja(html) { $('sheetIn').onclick = null; $('sheetIn').innerHTML = html; $('sheet').hidden = false; $('sheet').scrollTop = 0; document.body.style.overflow = 'hidden'; }
   function cerrarHoja() { $('sheet').hidden = true; document.body.style.overflow = ''; }
-  function topHoja(r) { return '<div class="top"><button class="back" id="back">‹ Volver</button><span class="k" style="margin-left:auto">' + (r && r.rotacion ? 'Ronda ' + esc(r.rotacion) : '') + '</span></div>'; }
+  function topHoja(r) { return '<div class="top"><button class="back" id="back">‹ Volver</button><span class="k" style="margin-left:auto">' + (r && r.rotacion ? 'Ronda ' + esc(romano(r.rotacion)) : '') + '</span></div>'; }
   var RMEM = {};   // rondas ya vistas en esta visita
   function abrirRonda(id) {
     var prev = RMEM[id] || null;
@@ -408,7 +418,7 @@
 
     var arr = conteo(r), totalVotos = (r.lista || []).filter(function (x) { return x.estado === 'voto'; }).length;
     if (abierta || r.estado === 'whatsapp') {
-      var lim = r.fecha_limite ? 'Cierre previsto: ' + fLarga(r.fecha_limite) + ' (la cierra Chiquito)' : (r.estado === 'whatsapp' ? (r.votaEnApp ? 'Se vota en el chat y aquí' : 'Se está votando en WhatsApp') : '');
+      var lim = (r.estado === 'whatsapp' ? (r.votaEnApp ? 'Se vota en el chat y aquí' : 'Se está votando en WhatsApp') : '');
       h += '<div class="status"><span class="muted">' + esc(lim) + '</span><span class="num" style="color:var(--bone)">' + totalVotos + ' de ' + (r.lista || []).length + '</span></div>';
     }
     if (extra) h += extra;
@@ -819,7 +829,7 @@
   }
   function filaHist(x) {
     var h = '';
-    if (x.encabezado) h += '<div class="hhead">' + esc(x.encabezado) + '</div>';
+    if (x.encabezado) h += '<div class="hhead">' + esc(String(x.encabezado).replace(/^Ronda (\d+)/, function (m, n) { return 'Ronda ' + romano(n); })) + '</div>';   // rondas en romanos, como en el cuaderno
     var tipo = x.tipo === 'cumpleaños' ? '🎂 ' : (x.tipo === 'póstuma' ? '✝️ ' : '');
     return h + '<button class="hrow" data-r="' + esc(x.id) + '">' + cover(x) + '<span class="a"><span class="t1"><span class="num">#' + esc(x.numero || '—') + '</span> ' + tipo + esc(x.banda) + ' – ' + esc(x.disco) + (x.anio ? ' <span class="muted">(' + esc(x.anio) + ')</span>' : '') + '</span>' +
       '<span class="w">' + (x.abierta ? '<span class="chip go" style="font-size:9.5px">votándose</span>' : esc(x.ganadora || '—')) + '</span>' +
@@ -929,7 +939,7 @@
       h += ranking('Participación', 'De las rondas en las que estaba en el grupo, a cuántas respondió con un voto', rk.participacion, function (x) { return pct(x.participacion); }, null, td.participacion);
       h += ranking('Ojo de ganador', 'Con qué frecuencia su voto fue para la canción que terminó ganando', rk.ojo, function (x) { return pct(x.ojo); }, null, td.ojo);
       h += ranking('Lobo solitario', 'Con qué frecuencia votó una canción que nadie más votó', rk.lobo, function (x) { return pct(x.solo); }, null, td.lobo);
-      h += ranking('Racha', 'Más rondas seguidas votando sin faltar', rk.racha, function (x) { return x.racha + (x.rachaActual === x.racha ? ' <span class="chip done" style="font-size:9px;padding:2px 6px">sigue</span>' : ''); }, null, td.racha);
+      h += ranking('Racha', 'La racha más larga de cada uno: Rondas seguidas votando sin faltar. «En curso» = esa racha sigue viva hoy', rk.racha, function (x) { return x.racha + (x.rachaActual === x.racha ? ' <span class="chip done" style="font-size:9px;padding:2px 6px">en curso</span>' : ''); }, null, td.racha);
       h += '<span class="k sec-t">Afinidad</span>';
       // Afinidad (14-nov): arriba, las 5 parejas más fuertes sin repetir a nadie; detrás, una línea por persona
       var apm = s.afinidadPorMiembro || [];
@@ -1093,7 +1103,7 @@
     if (!S.abiertas.length) h += '<div class="note">No hay votaciones abiertas.</div>';
     S.abiertas.filter(function (r) { return r.estado !== 'desempate'; }).forEach(function (r) {
       var lista = r.todosVotaron ? '<span class="chip done">Todos votaron · ¿cerrar?</span>' : (r.listaParaCerrar ? '<span class="chip gold">Lista para cerrar</span>' : '');
-      var lim = r.fecha_limite ? 'Cierre previsto: ' + fCorta(r.fecha_limite) + (r.prorroga ? ' (con prórroga)' : '') : (r.estado === 'whatsapp' ? (r.canciones >= 2 ? 'Se vota en el chat y en la app · ' : 'Se vota en WhatsApp · ') + r.diasAbierta + ' días abierta' : '');
+      var lim = (r.estado === 'whatsapp' ? (r.canciones >= 2 ? 'Se vota en el chat y en la app · ' : 'Se vota en WhatsApp · ') + r.diasAbierta + ' días abierta' : (r.diasAbierta ? r.diasAbierta + (r.diasAbierta === 1 ? ' día abierta' : ' días abierta') : ''));
       h += '<div class="pcard"><div class="pc-h"><span class="num">#' + esc(r.numero) + '</span> <b>' + esc(r.banda) + '</b> · ' + esc(r.disco) + ' ' + lista + '</div>' +
         '<div class="muted" style="font-size:13px">' + r.votaron + ' de ' + r.total + ' votaron' + (lim ? ' · ' + esc(lim) : '') + '</div>' +
         (r.faltan && r.faltan.length ? '<div class="faltan">Faltan: <b>' + esc(r.faltan.join(', ')) + '</b></div>' : '') +

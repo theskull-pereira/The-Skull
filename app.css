@@ -203,7 +203,7 @@ input[type=search]{width:100%;background:var(--slab2);border:1px solid var(--lin
 .rk-h{display:flex;flex-direction:column;margin-bottom:6px} .rk-h b{font-family:var(--f-head);font-weight:800;font-size:19px;text-transform:uppercase;letter-spacing:.02em} .rk-h .muted{font-size:12.5px}
 .rk{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:15px}
 .rk .pos{font-family:var(--f-mono);color:var(--dust);font-size:12px}
-.rk:nth-of-type(2) .pos{color:var(--gold)}
+.rk-top>.rk:first-child .pos,.rk-todos>.rk:first-child .pos{color:var(--gold)}   /* solo el primer puesto va en dorado */
 .rk .v{font-family:var(--f-mono);font-size:13px;color:var(--gold);font-variant-numeric:tabular-nums}
 .rank .hrow{padding:8px 0}
 .sb{display:grid;grid-template-columns:minmax(0,34%) 1fr 44px;gap:8px;align-items:center;font-size:14px}
@@ -326,3 +326,58 @@ button.falta-b.v.w{color:var(--gold);border-color:var(--gold)}
 
 .plb .btn{display:flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;min-width:0}
 .plb .btn .ic{font-size:15px;line-height:1}
+
+/* Cabecera: por debajo de la barra de hora y batería del iPhone, no detrás (14-nov) */
+.hero{margin-top:env(safe-area-inset-top,0px)}
+.hero .who{top:10px}
+/* Crédito del dibujo, sobre la propia cabecera */
+.hero::before{content:"\00A9  Mile";position:absolute;left:45.5%;top:72%;z-index:1;font-family:var(--f-mono);font-size:10px;letter-spacing:.4px;color:var(--bone);opacity:.8;text-shadow:0 1px 3px #000;white-space:nowrap}
+
+/* =====================================================================
+ *  REGLA DE LO QUE SE TOCA (14-nov) + cromo/plata con rojo sangre
+ *  Nivel 1 · acción principal: botón ROJO relleno.
+ *  Nivel 2 · acción secundaria: botón de CROMO (borde plateado, fondo de acero).
+ *  Nivel 3 · abrir, ver más, enlaces: texto subrayado con flecha roja.
+ *  Tarjetas y filas que se abren llevan «›» a la derecha.
+ *  Las etiquetas (no se tocan) son rectángulos pequeños sin borde: nunca parecen botones.
+ * ===================================================================== */
+:root{--chrome:#C9CED6;--chrome-hi:#F4F6F9;--chrome-lo:#7B828E;--steel-1:#2A2D33;--steel-2:#191B1F}
+.ico{width:1.15em;height:1.15em;vertical-align:-.2em;margin-right:.35em;flex:none}
+/* Nivel 1 */
+.btn{box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 2px 0 #5e1510;border:1px solid #d8473a}
+.btn:active{transform:translateY(1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.15)}
+.btn:disabled{box-shadow:none;border-color:var(--line)}
+/* Nivel 2 */
+.btn.ghost,.fchip,.fsel,button.falta-b{background:linear-gradient(var(--steel-1),var(--steel-2));border:1px solid var(--chrome-lo);color:var(--chrome-hi);box-shadow:inset 0 1px 0 rgba(255,255,255,.14)}
+.btn.ghost:active,.fchip:active{background:var(--steel-2)}
+.fchip.on{background:var(--blood);border-color:#d8473a;color:#fff}
+.btn.goldb,.btn.alerta{box-shadow:inset 0 1px 0 rgba(255,255,255,.35);border-color:var(--gold)}
+#dc .again{box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 2px 0 #5e1510}
+/* Nivel 3 */
+.linkb,.cuaderno .cabrir{color:var(--chrome-hi);text-decoration:underline;text-decoration-color:var(--blood);text-underline-offset:4px;text-decoration-thickness:2px}
+.linkb::after{content:" ›";color:var(--blood);font-weight:700}
+details>summary{list-style:none;display:flex;align-items:center;gap:8px;color:var(--chrome-hi)}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:"▸";color:var(--blood);font-size:15px;transition:transform .15s}
+details[open]>summary::before{transform:rotate(90deg)}
+details>summary b{text-decoration:underline;text-decoration-color:var(--blood);text-underline-offset:4px}
+/* Tarjetas y filas que se abren */
+.card:not(.static),.hrow,button.last,button.note[data-r]{position:relative}
+.card:not(.static)::after,.hrow::after{content:"›";align-self:center;margin-left:auto;padding-left:6px;color:var(--chrome);font-size:22px;line-height:1;flex:none}
+.card:not(.static){border-color:#3d3a44}
+.card.mine{border-color:var(--blood)}
+/* Etiquetas: no se tocan */
+.chip{border-radius:4px;padding:3px 7px;font-size:10px}
+.chip.go{border-radius:999px;padding:5px 11px;font-size:11px;box-shadow:inset 0 1px 0 rgba(255,255,255,.22)}   /* «Votar» va dentro de una tarjeta que se toca: sí es acción */
+/* Cromo en los títulos y en la barra de abajo */
+h2,.rk-h b,.turno .t1,.plb-t{background:linear-gradient(#ffffff,#c4c9d1 45%,#8a909b 60%,#dfe3e8);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.turno.mio .t1{background:none;color:var(--bone);-webkit-text-fill-color:currentColor}
+.k.sec-t{display:flex;align-items:center;color:var(--chrome)}
+.k.sec-t .ico{color:var(--blood)}
+.facts dt .ico,button.note .ico{color:var(--chrome)}
+nav.tabs{border-top:1px solid #3a3d44;background:linear-gradient(#1b1c20,#0f0e11)}
+nav.tabs button{color:var(--chrome-lo);display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0}
+nav.tabs button .ico{width:22px;height:22px;margin:0}
+nav.tabs button i{order:-1;width:26px;margin:0 auto 3px}
+nav.tabs button.on{color:var(--chrome-hi)}
+nav.tabs button.on .ico{color:var(--blood)}
