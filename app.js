@@ -245,10 +245,10 @@
       h += '<button class="note" data-r="' + esc(w.id) + '" style="text-align:left;cursor:pointer;border-style:solid">Lo último que se cerró: <span class="num">#' + esc(w.numero) + '</span> ' + esc(w.banda) +
         ' → <b style="color:var(--gold)">' + esc(w.ganadora) + '</b></button>';
     }
-    h += '<span class="k sec-t">Del cuaderno</span><div id="dc"><div class="cuaderno"><span class="muted">Abriendo el cuaderno…</span></div></div>';   // 1E
+    h += '<div class="cuentos-t"><span>Cuentos del Cuaderno</span></div><div id="dc"><div class="cuaderno"><span class="muted">Abriendo el cuaderno…</span></div></div>';   // 1E
     var conFotos = S.abiertas.some(function (r) { return r.portada; }) || (S.ultima && S.ultima.portada);
     if (conFotos) h += '<a class="dgs" style="align-self:center" target="_blank" rel="noopener" href="https://www.discogs.com">Portadas: Data provided by Discogs.</a>';   // condición de Discogs
-    h += '<p class="foot">' + esc(S.grupo || 'The Skull') + ' · v' + esc(S.version || '1.1') + '</p>';
+    h += '<p class="foot">' + esc(S.grupo || 'The Skull') + ' · v' + esc(S.version || '1.1') + '<br>Imagen original: Milena</p>';
     return h;
   }
   function enlazarInicio() {
@@ -259,13 +259,24 @@
     };
     delCuaderno();
   }
+  function romano(n) {
+    n = parseInt(n, 10); if (!(n > 0 && n < 4000)) return String(n || '');
+    var v = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1], s = ['M', 'CM', 'D', 'CD', 'C', 'XC', 'L', 'XL', 'X', 'IX', 'V', 'IV', 'I'], o = '';
+    for (var i = 0; i < v.length; i++) while (n >= v[i]) { o += s[i]; n -= v[i]; }
+    return o;
+  }
+  /* «Cuentos del Cuaderno» (14-nov): una propuesta antigua al azar. Tocar la tarjeta abre el disco; el botón rojo saca otra. */
   function delCuaderno() {
+    var b0 = $('dcOtra'); if (b0) { b0.disabled = true; b0.textContent = '🩸 Desenterrando…'; }
     api('api_delCuaderno').then(function (r) {
       var box = $('dc'); if (!box || !r) return;
-      box.innerHTML = '<div class="cuaderno" data-r="' + esc(r.id) + '">' + (r.portada ? '<img class="cimg" alt="" src="' + esc(r.portada) + '" onerror="this.remove()">' : '') + '<div class="k">#' + esc(r.numero) + (r.rotacion ? ' · Ronda ' + esc(r.rotacion) : '') + '</div>' +
+      box.innerHTML = '<div class="cuaderno" data-r="' + esc(r.id) + '"><div class="sangre"></div>' +
+        (r.portada ? '<img class="cimg" alt="" src="' + esc(r.portada) + '" onerror="this.remove()">' : '') +
+        '<div class="k">#' + esc(r.numero) + (r.rotacion ? ' · Ronda ' + esc(romano(r.rotacion)) : '') + '</div>' +
         '<div class="hand">' + esc(r.banda) + ' – ' + esc(r.disco) + (r.anio ? ' <span class="muted" style="font-family:var(--f-body);font-size:14px">(' + esc(r.anio) + ')</span>' : '') + '</div>' +
         '<div class="w">⇒ ' + esc(r.ganadora) + '</div><div class="muted" style="font-size:13px">' + esc(quien(r)) + '</div>' +
-        '<button class="again" id="dcOtra">Otra del cuaderno</button></div>';
+        '<div class="cabrir">Abrir este disco ›</div></div>' +
+        '<button class="btn again" id="dcOtra">🩸 Desenterrar otra</button>';
       $('dcOtra').onclick = function (e) { e.stopPropagation(); delCuaderno(); };
     }).catch(function () { var box = $('dc'); if (box) box.innerHTML = ''; });
   }
@@ -351,8 +362,8 @@
       '</div></div>';
     var q = encodeURIComponent(r.banda + ' ' + r.disco);
     // Enlaces (14-nov): YouTube Music va directo a la lista del disco o no sale; Spotify, directo o la búsqueda solo de álbumes
-    h += '<div class="row">' + (r.spotify ? '<a class="btn ghost" target="_blank" rel="noopener" href="' + esc(r.spotify) + '">Spotify ›</a>' : '<a class="btn ghost" target="_blank" rel="noopener" href="https://open.spotify.com/search/' + q + '/albums">Spotify ›</a>') +
-      (r.youtube ? '<a class="btn ghost" target="_blank" rel="noopener" href="' + esc(r.youtube) + '">YouTube Music ›</a>' : '') +
+    h += '<div class="row">' + (r.spotify ? '<a class="btn ghost" target="_blank" rel="noopener" href="' + esc(r.spotify) + '">Spotify ›</a>' : '<a class="btn ghost" target="_blank" rel="noopener" href="https://open.spotify.com/search/' + q + '">Spotify ›</a>') +
+      '<a class="btn ghost" target="_blank" rel="noopener" href="' + (r.youtube ? esc(r.youtube) : 'https://music.youtube.com/search?q=' + q) + '">YouTube Music ›</a>' +   // siempre está: directo al disco si hay enlace, y si no, la búsqueda (como antes)
       '<a class="btn ghost" target="_blank" rel="noopener" href="https://www.metal-archives.com/search?searchString=' + encodeURIComponent(r.banda) + '&type=band_name">Metal Archives ›</a></div>';
     if (r.presentacion) h += '<details class="note"><summary><b>Presentación de ' + esc(r.proponente) + '</b></summary><div class="pres" style="margin-top:8px">' + esc(r.presentacion) + '</div></details>';
     if (r.edicion) h += '<div class="note">Edición: ' + esc(r.edicion) + '</div>';

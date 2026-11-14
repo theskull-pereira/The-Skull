@@ -272,3 +272,31 @@ select.sel:disabled,input:disabled{opacity:.55}
 .pasos span.on{color:#fff;border-color:var(--gold,#c9a24a);background:rgba(201,162,74,.12);font-weight:600}
 .pasos span.ya{color:var(--gold,#c9a24a)}
 .pasara ol{margin:8px 0 8px 20px;padding:0;display:flex;flex-direction:column;gap:6px}
+
+/* Cuentos del Cuaderno (14-nov): título de terror, sangre que gotea y un botón que se ve botón */
+.cuentos-t{margin:18px 0 2px;text-align:center}
+.cuentos-t span{font-family:"Creepster","Pirata One",Georgia,serif;font-size:34px;line-height:1;letter-spacing:1.5px;color:var(--blood);text-shadow:0 2px 0 #4a0e0a,0 0 18px rgba(179,41,30,.45)}
+#dc{display:flex;flex-direction:column;gap:10px}
+.cuaderno{border-color:#4a1512;background:linear-gradient(#1c1113,#151216 55%);padding:30px 14px 14px 18px}
+.cuaderno::before{display:none}
+.cuaderno .sangre{position:absolute;left:0;right:0;top:0;height:26px;pointer-events:none;
+  background:
+    radial-gradient(ellipse 7px 22px at 9% 0,var(--blood) 98%,transparent 100%),
+    radial-gradient(ellipse 5px 13px at 21% 0,var(--blood) 98%,transparent 100%),
+    radial-gradient(ellipse 9px 26px at 37% 0,var(--blood) 98%,transparent 100%),
+    radial-gradient(ellipse 5px 10px at 50% 0,var(--blood) 98%,transparent 100%),
+    radial-gradient(ellipse 7px 18px at 64% 0,var(--blood) 98%,transparent 100%),
+    radial-gradient(ellipse 6px 24px at 79% 0,var(--blood) 98%,transparent 100%),
+    radial-gradient(ellipse 5px 12px at 92% 0,var(--blood) 98%,transparent 100%),
+    linear-gradient(var(--blood) 0 5px,transparent 5px)}
+.cuaderno .hand{font-size:25px}
+.cuaderno .w{font-size:21px}
+.cuaderno .cabrir{margin-top:10px;font-size:13px;color:var(--bone);text-decoration:underline;text-underline-offset:3px}
+#dc .again{margin-top:0;align-self:stretch;background:var(--blood);border:1px solid #d8473a;color:#fff;border-radius:12px;font-size:16px;font-weight:600;padding:13px 14px;font-family:var(--f-body)}
+#dc .again:disabled{opacity:.6}
+
+/* Fuentes de terror servidas desde el propio sitio (14-nov): así cargan siempre, sin depender de Google Fonts. Licencia OFL (ver fonts/). */
+@font-face{font-family:"Creepster";src:url("fonts/Creepster-Regular.ttf") format("truetype");font-display:swap}
+@font-face{font-family:"Pirata One";src:url("fonts/PirataOne-Regular.ttf") format("truetype");font-display:swap}
+/* Pantalla de votar: portada más pequeña para que la lista de canciones se vea antes (14-nov, Carlos) */
+.big{max-width:190px}
