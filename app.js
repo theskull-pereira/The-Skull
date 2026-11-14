@@ -147,6 +147,26 @@
       $('view').innerHTML = '<div style="height:20px"></div><div class="err">' + esc(errMsg(e)) + '</div>' + sinEnlace();
     });
   }
+  /* Puesta al día sola (14-nov): el teléfono guarda la app unos 10 minutos (o más, en el icono de la pantalla de inicio).
+   * La app mira si hay una versión más nueva publicada y, si la hay, se recarga sola con ella. */
+  var VER = (function () { var s = document.querySelector('script[src*="app.js"]'); return Number(((s && s.getAttribute('src')) || '').replace(/^.*[?&]v=(\d+).*$/, '$1')) || 0; })();
+  function mirarVersion() {
+    if (!VER || typeof window.SKULL_DEMO === 'function' || typeof fetch !== 'function') return;
+    fetch('index.html?nc=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : ''; }).then(function (html) {
+      var n = Number((/app\.js\?v=(\d+)/.exec(html) || [])[1]) || 0;
+      if (n <= VER) return;
+      var ya = ''; try { ya = sessionStorage.getItem('skull_upd') || ''; } catch (e) {}
+      if (ya === String(n)) return;                                   // ya se intentó con esta versión: no se insiste
+      var a = document.activeElement, escribiendo = a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName);
+      if (escribiendo || !$('sheet').hidden) return;                  // no se interrumpe a quien está votando, proponiendo o escribiendo
+      try { sessionStorage.setItem('skull_upd', String(n)); } catch (e) {}
+      toast('Actualizando la app…');
+      setTimeout(function () { location.replace(location.pathname + '?' + (TOKEN ? 't=' + encodeURIComponent(TOKEN) + '&' : '') + 'v=' + n); }, 600);
+    }).catch(function () {});
+  }
+  setTimeout(mirarVersion, 4000);
+  setInterval(function () { if (!document.hidden) mirarVersion(); }, 300000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) setTimeout(mirarVersion, 1500); });
   /* Que lo que hace otro (cerrar, cancelar, votar) se vea sin tener que cerrar la app (14-nov):
    * se vuelve a pedir el estado al volver a la app y cada 2 minutos mientras está a la vista. */
   var ULT_REFRESCO = 0;
@@ -261,7 +281,7 @@
     h += '<div class="cuentos-t"><span>Cuentos del Cuaderno</span></div><div id="dc"><div class="cuaderno"><span class="muted">Abriendo el cuaderno…</span></div></div>';   // 1E
     var conFotos = S.abiertas.some(function (r) { return r.portada; }) || (S.ultima && S.ultima.portada);
     if (conFotos) h += '<a class="dgs" style="align-self:center" target="_blank" rel="noopener" href="https://www.discogs.com">Portadas: Data provided by Discogs.</a>';   // condición de Discogs
-    h += '<p class="foot">' + esc(S.grupo || 'The Skull') + ' · v' + esc(S.version || '1.1') + '<br>Imagen original: Milena</p>';
+    h += '<p class="foot">' + esc(S.grupo || 'The Skull') + ' · v' + esc(S.version || '1.1') + (VER ? ' · ' + VER : '') + '<br>Imagen original: Milena</p>';
     return h;
   }
   function enlazarInicio() {
