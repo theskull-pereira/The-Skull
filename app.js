@@ -54,11 +54,16 @@
   function cajaMensaje(text, titulo) {
     if (S && S.me && S.me.sinWhatsapp) return '';   // 9G: sin botones de WhatsApp para quien no está en el grupo
     var id = 'm' + Math.random().toString(36).slice(2, 8);
-    setTimeout(function () { var b = $(id + 'c'); if (b) b.onclick = function () { copiar(text, $(id)); }; }, 0);
+    setTimeout(function () {
+      var b = $(id + 'c'), w = $(id + 'w'), ta = $(id);
+      if (b) b.onclick = function () { copiar(ta.value, ta); };
+      if (w) w.onclick = function () { w.href = waLink(ta.value); };   // lo que hay escrito ahora, no el texto original
+    }, 0);
     return '<div class="sec"><span class="k">' + esc(titulo || 'Mensaje para WhatsApp') + '</span>' +
-      '<textarea id="' + id + '" readonly style="min-height:120px">' + esc(text) + '</textarea>' +
+      '<textarea id="' + id + '" style="min-height:120px">' + esc(text) + '</textarea>' +
+      '<span class="muted" style="font-size:12.5px">Puedes cambiar el texto o añadir algo tuyo antes de enviarlo.</span>' +
       '<div class="row"><button class="btn ghost" id="' + id + 'c">Copiar</button>' +
-      '<a class="btn" target="_blank" rel="noopener" href="' + waLink(text) + '">Abrir WhatsApp</a></div></div>';
+      '<a class="btn" id="' + id + 'w" target="_blank" rel="noopener" href="' + waLink(text) + '">Abrir WhatsApp</a></div></div>';
   }
 
   /* ---------- conexión con el motor ---------- */
@@ -70,7 +75,9 @@
     if (!CFG.MOTOR) return Promise.reject(new Error('La app todavía no está conectada.'));
     var lectura = LECTURAS.indexOf(fn) >= 0;
     function pedir() {
-      return fetch(CFG.MOTOR, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: fn, args: args }) })
+      var ctl = typeof AbortController === 'function' ? new AbortController() : null, corta = ctl ? setTimeout(function () { ctl.abort(); }, 90000) : 0;
+      return fetch(CFG.MOTOR, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: fn, args: args }), signal: ctl ? ctl.signal : undefined })
+        .then(function (res) { clearTimeout(corta); return res; }, function (e) { clearTimeout(corta); throw e; })
         .then(function (res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
         .catch(function (e) { var x = new Error(lectura ? 'No hay conexión con la app en este momento. Inténtalo de nuevo.' : 'La app no respondió. Espera unos segundos y vuelve a intentarlo.'); x.red = true; throw x; });
     }
@@ -88,6 +95,14 @@
     var fin = function () { clearTimeout(lento); clearTimeout(lento2); };
     return p.then(function (o) { fin(); if (!o.ok) throw new Error(o.error || 'Algo salió mal'); return o.data; }, function (e) { fin(); throw e; });
   }
+  /* Memoria en el teléfono (14-nov-2026, velocidad): lo último que se vio se guarda aquí, para pintarlo al instante
+   * al abrir la app mientras llega lo nuevo. Va atado al enlace personal: si cambia, no se usa. Caduca a los 7 días. */
+  function memoPon(k, v) { try { localStorage.setItem('skull_m_' + k, JSON.stringify({ t: TOKEN, at: Date.now(), v: v })); } catch (e) {} }
+  function memoLee(k) {
+    try { var o = JSON.parse(localStorage.getItem('skull_m_' + k) || 'null'); if (o && o.t === TOKEN && Date.now() - o.at < 6048e5) return o.v; } catch (e) {}
+    return null;
+  }
+  function memoBorra() { try { Object.keys(localStorage).forEach(function (k) { if (/^skull_m_/.test(k)) localStorage.removeItem(k); }); } catch (e) {} }
   function leerToken() {
     var t = new URLSearchParams(location.search).get('t') || '';
     try { if (t) localStorage.setItem('skull_t', t); else t = localStorage.getItem('skull_t') || ''; } catch (e) {}
@@ -109,10 +124,18 @@
   }
   function cargar(silencioso) {
     if (!TOKEN) { $('view').innerHTML = sinEnlace(); return Promise.resolve(); }
+    var deMemoria = false;
+    if (!S) { var m = memoLee('estado'); if (m && m.me) { S = m; deMemoria = true; tabs(); render(); } }   // al instante, con lo último guardado
     return api('api_state').then(function (st) {
-      S = st; if (!silencioso || !$('tabs').innerHTML) tabs(); if (!silencioso || TAB === 'inicio') render();
+      var igual = deMemoria && JSON.stringify(st) === JSON.stringify(S);
+      S = st; memoPon('estado', st);
+      if (igual) return;
+      if (deMemoria) { tabs(); if (TAB === 'inicio' && $('sheet').hidden) render(); return; }
+      if (!silencioso || !$('tabs').innerHTML) tabs(); if (!silencioso || TAB === 'inicio') render();
     }).catch(function (e) {
       if (silencioso) return;
+      if (deMemoria && e && e.red) { toast('Sin conexión: ves lo último que se guardó'); return; }
+      if (deMemoria) { S = null; memoBorra(); $('tabs').hidden = true; }
       if (e && e.red) {   // fallo de conexión: no es problema del enlace
         $('view').innerHTML = '<div class="hero"></div><div class="err">' + esc(errMsg(e)) + '</div><button class="btn" id="reint">Reintentar</button>';
         $('reint').onclick = function () { $('view').innerHTML = '<div class="hero"></div><div class="spin"></div>'; cargar(); };
@@ -182,15 +205,25 @@
   }
   function vistaInicio() {
     var h = '<div class="hero"><span class="who">' + esc(S.me.nombre) + '</span></div>';
-    var pendientes = S.abiertas.filter(function (r) { return r.estado === 'abierta' && !r.miVoto; }).length;
+    var pendientes = S.abiertas.filter(function (r) { return (r.estado === 'abierta' || (r.estado === 'whatsapp' && r.canciones >= 2)) && !r.miVoto; }).length;   // las mismas que muestran «Votar»
     h += '<div class="hello">Hola, ' + esc(S.me.nombre) + '<span>' +
       (pendientes ? (pendientes === 1 ? 'Tienes una propuesta por votar.' : 'Tienes ' + pendientes + ' propuestas por votar.') : (S.abiertas.length ? 'Estás al día con tus votos. 🤘' : 'No hay nada votándose ahora mismo.')) + '</span></div>';
     S.desempates.forEach(function (r) {
       h += '<div class="warn"><span><b>Empate en la #' + esc(r.numero) + ' ' + esc(r.banda) + '.</b> ' + esc(r.desempate) + '</span>' +
         '<button class="btn small" data-r="' + esc(r.id) + '">Elegir la ganadora</button></div>';
     });
-    if (S.puedo.normal) h += '<button class="btn" data-prop="normal">Te toca proponer, ' + esc(S.me.nombre) + '</button>';
-    if (S.puedo.cumple) h += '<button class="btn goldb" data-prop="cumpleaños">🎂 Hacer tu propuesta de cumpleaños</button>';
+    // Tarjeta de turno (14-nov): quien tiene que proponer lo ve enseguida, y los demás saben a quién le toca
+    var sig = S.siguiente || '', llenas = S.huecos && S.huecos.normalSlot === false;
+    if (S.puedo.normal) {
+      h += '<div class="turno mio"><span class="t1">💀 ¡Te toca proponer, ' + esc(S.me.nombre) + '!</span>' +
+        '<span class="t2">Elige una banda y un disco para que el grupo lo vote.</span><button class="btn" data-prop="normal">Proponer un disco</button></div>';
+    } else if (sig) {
+      h += '<div class="turno"><span class="t1">Ahora le toca proponer a ' + esc(sig) + '</span>' +
+        '<span class="t2">' + (llenas ? 'Ya hay el máximo de propuestas abiertas: podrá proponer cuando se cierre una.' : 'Cuando lo haga, aparecerá aquí para que votes.') + '</span>' +
+        (S.me.esAdmin && S.puedo.porOtro && !llenas ? '<button class="btn ghost small" data-prop="normal" data-por="' + esc(sig) + '">Proponer en nombre de ' + esc(sig) + '</button>' : '') + '</div>';
+    }
+    if (S.puedo.cumple) h += '<div class="turno cumple"><span class="t1">🎂 Tienes una propuesta de cumpleaños</span><span class="t2">Va aparte del turno normal: elige tu disco cuando quieras.</span>' +
+      '<button class="btn goldb" data-prop="cumpleaños">Hacer mi propuesta de cumpleaños</button></div>';
     if (S.puedo.extra) h += '<button class="btn ghost" data-prop="extra">Pedir un turno extra</button>';
 
     var abiertas = S.abiertas.filter(function (r) { return r.estado !== 'desempate'; });
@@ -206,8 +239,7 @@
         '<span class="win">' + esc(u.ganadora) + '</span><span class="muted" style="font-size:13px">' + esc([quien(u), origen(u)].filter(Boolean).join(' · ')) + '</span></button>';
     }
     // 1D: sin «Abiertas: N normales…» (eso va al Panel)
-    h += '<div class="note"><dl class="facts"><dt>Próximo en proponer</dt><dd>' + esc(S.siguiente || '—') + '</dd>' +
-      (S.colaCumples.length ? '<dt>Cola de cumpleaños</dt><dd>' + esc(S.colaCumples.join(', ')) + '</dd>' : '') + '</dl></div>';
+    if (S.colaCumples.length) h += '<div class="note"><dl class="facts"><dt>Cola de cumpleaños</dt><dd>' + esc(S.colaCumples.join(', ')) + '</dd></dl></div>';
     if (abiertas.length && S.ultima) {
       var w = S.ultima;
       h += '<button class="note" data-r="' + esc(w.id) + '" style="text-align:left;cursor:pointer;border-style:solid">Lo último que se cerró: <span class="num">#' + esc(w.numero) + '</span> ' + esc(w.banda) +
@@ -223,7 +255,7 @@
     var v = $('view');
     v.onclick = function (e) {
       var t = e.target.closest('[data-r]'); if (t) { abrirRonda(t.getAttribute('data-r')); return; }
-      var p = e.target.closest('[data-prop]'); if (p) abrirProponer(p.getAttribute('data-prop'));
+      var p = e.target.closest('[data-prop]'); if (p) abrirProponer(p.getAttribute('data-prop'), p.getAttribute('data-por') || '');
     };
     delCuaderno();
   }
@@ -242,10 +274,20 @@
   function abrirHoja(html) { $('sheetIn').onclick = null; $('sheetIn').innerHTML = html; $('sheet').hidden = false; $('sheet').scrollTop = 0; document.body.style.overflow = 'hidden'; }
   function cerrarHoja() { $('sheet').hidden = true; document.body.style.overflow = ''; }
   function topHoja(r) { return '<div class="top"><button class="back" id="back">‹ Volver</button><span class="k" style="margin-left:auto">' + (r && r.rotacion ? 'Ronda ' + esc(r.rotacion) : '') + '</span></div>'; }
+  var RMEM = {};   // rondas ya vistas en esta visita
   function abrirRonda(id) {
-    abrirHoja(topHoja() + '<div class="spin"></div>'); $('back').onclick = cerrarHoja;
-    api('api_round', id).then(function (r) { CUR = r; EDIT = false; SEL = r.miVoto && r.miVoto !== ABST ? r.miVoto : ''; dibujarRonda(); })
-      .catch(function (e) { abrirHoja(topHoja() + '<div class="err">' + esc(errMsg(e)) + '</div>'); $('back').onclick = cerrarHoja; });
+    var prev = RMEM[id] || null;
+    if (prev) { CUR = prev; EDIT = false; SEL = prev.miVoto && prev.miVoto !== ABST ? prev.miVoto : ''; dibujarRonda(); }
+    else { abrirHoja(topHoja() + '<div class="spin"></div>'); $('back').onclick = cerrarHoja; }
+    var sel0 = SEL;
+    api('api_round', id).then(function (r) {
+      RMEM[id] = r;
+      if (prev) {   // ya está en pantalla: solo se repinta si cambió algo y la persona no ha empezado a votar o escribir
+        if ($('sheet').hidden || !CUR || CUR.id !== id || JSON.stringify(r) === JSON.stringify(prev)) return;
+        if (EDIT || SEL !== sel0 || (($('com') || {}).value || '') !== (prev.miComentario || '')) return;
+      }
+      CUR = r; EDIT = false; SEL = r.miVoto && r.miVoto !== ABST ? r.miVoto : ''; dibujarRonda();
+    }).catch(function (e) { if (prev) return; abrirHoja(topHoja() + '<div class="err">' + esc(errMsg(e)) + '</div>'); $('back').onclick = cerrarHoja; });
   }
   /** Conteo: de la lista de canciones; si la ronda vino del chat (sin lista), de los votos. */
   function conteo(r) {
@@ -308,8 +350,10 @@
       (r.tipo === 'cumpleaños' ? '<span class="tag cumple">' + esc(quien(r)) + '</span>' : r.tipo === 'póstuma' ? '<span class="tag postuma">' + esc(quien(r)) + '</span>' : '<span class="m">' + esc(quien(r)) + '</span>') +
       '</div></div>';
     var q = encodeURIComponent(r.banda + ' ' + r.disco);
-    h += '<div class="row">' + (r.spotify ? '<a class="btn ghost" target="_blank" rel="noopener" href="' + esc(r.spotify) + '">Spotify</a>' : '<a class="btn ghost" target="_blank" rel="noopener" href="https://open.spotify.com/search/' + q + '">Spotify</a>') +
-      (r.youtube ? '<a class="btn ghost" target="_blank" rel="noopener" href="' + esc(r.youtube) + '">YouTube</a>' : '<a class="btn ghost" target="_blank" rel="noopener" href="https://music.youtube.com/search?q=' + q + '">YouTube</a>') + '</div>';
+    // Enlaces (14-nov): YouTube Music va directo a la lista del disco o no sale; Spotify, directo o la búsqueda solo de álbumes
+    h += '<div class="row">' + (r.spotify ? '<a class="btn ghost" target="_blank" rel="noopener" href="' + esc(r.spotify) + '">Spotify ›</a>' : '<a class="btn ghost" target="_blank" rel="noopener" href="https://open.spotify.com/search/' + q + '/albums">Spotify ›</a>') +
+      (r.youtube ? '<a class="btn ghost" target="_blank" rel="noopener" href="' + esc(r.youtube) + '">YouTube Music ›</a>' : '') +
+      '<a class="btn ghost" target="_blank" rel="noopener" href="https://www.metal-archives.com/search?searchString=' + encodeURIComponent(r.banda) + '&type=band_name">Metal Archives ›</a></div>';
     if (r.presentacion) h += '<details class="note"><summary><b>Presentación de ' + esc(r.proponente) + '</b></summary><div class="pres" style="margin-top:8px">' + esc(r.presentacion) + '</div></details>';
     if (r.edicion) h += '<div class="note">Edición: ' + esc(r.edicion) + '</div>';
 
@@ -445,12 +489,22 @@
   }
   function votar(cancion, boton) {
     var txt = boton.textContent; boton.disabled = true; boton.textContent = 'Guardando…';
-    api('api_vote', CUR.id, cancion, ($('com') || {}).value || '').then(function (r) {
-      CUR = r; EDIT = false; SEL = cancion === ABST ? '' : cancion;
+    var rid = CUR.id;
+    function hecho(r) {
+      CUR = r; RMEM[rid] = r; EDIT = false; SEL = cancion === ABST ? '' : cancion;
       toast(cancion === ABST ? 'Listo: te abstuviste' : 'Voto guardado');
       dibujarRonda(cancion === ABST || !r.compartir ? '' : cajaMensaje(r.compartir, 'Comparte tu voto en el grupo'));
       cargar(true);
-    }).catch(function (e) { toast(errMsg(e)); boton.disabled = false; boton.textContent = txt; });
+    }
+    api('api_vote', rid, cancion, ($('com') || {}).value || '').then(hecho).catch(function (e) {
+      if (!(e && e.red)) { toast(errMsg(e)); boton.disabled = false; boton.textContent = txt; return; }
+      // Se cortó la conexión justo al guardar: en vez de adivinar, se pregunta si el voto llegó
+      boton.textContent = 'Comprobando…';
+      api('api_round', rid).then(function (r) {
+        if (r.miVoto === cancion) { hecho(r); return; }
+        toast('El voto NO se guardó (se cortó la conexión). Tócalo otra vez.'); boton.disabled = false; boton.textContent = txt;
+      }).catch(function () { toast('Sin conexión. No sabemos si el voto llegó: abre la app de nuevo en un momento y mira.'); boton.disabled = false; boton.textContent = txt; });
+    });
   }
 
   /* ---------- Proponer (3A–3E): banda → discografía → edición → proponer ---------- */
@@ -462,11 +516,22 @@
     });
     return out.length ? '<details class="note"><summary><b>Qué discos valen</b></summary><div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">' + out.join('<br>') + '</div></details>' : '';
   }
-  function topProp(titulo, atras) { return '<div class="top"><button class="back" id="back">‹ ' + (atras ? 'Atrás' : 'Cancelar') + '</button><span class="k" style="margin-left:auto">' + esc(titulo) + '</span></div>'; }
+  function topProp(titulo, atras, paso) {
+    var pasos = ['Banda', 'Disco', 'Revisar y enviar'];
+    var barra = paso ? '<div class="pasos">' + pasos.map(function (p, i) { return '<span class="' + (i + 1 < paso ? 'ya' : (i + 1 === paso ? 'on' : '')) + '"><i>' + (i + 1 < paso ? '✓' : i + 1) + '</i>' + p + '</span>'; }).join('') + '</div>' : '';
+    return '<div class="top"><button class="back" id="back">‹ ' + (atras ? 'Atrás' : 'Cancelar') + '</button><span class="k" style="margin-left:auto">' + esc(titulo) + '</span></div>' + barra;
+  }
+  /** Qué pasa al tocar «Proponer» (para que nadie proponga a ciegas). */
+  function quePasa() {
+    return '<div class="note pasara"><b>Al tocar «Proponer» pasa esto:</b><ol><li>La propuesta queda <b>abierta</b> y todos pueden votarla en la app.</li>' +
+      '<li>Te mostramos el <b>mensaje listo</b> para copiarlo en el grupo de WhatsApp (puedes añadirle texto).</li>' +
+      (P.tipo === 'normal' && !P.por ? '<li>Tu turno queda usado y pasa al siguiente.</li>' : '') +
+      '</ol><span class="muted">Si te equivocas, Chiquito puede corregirla o cancelarla.</span></div>';
+  }
   function tituloTipo() { if (P.por) return (P.tipo === 'cumpleaños' ? '🎂 ' : '') + 'En nombre de ' + P.por; return P.tipo === 'cumpleaños' ? '🎂 Propuesta de cumpleaños' : (P.tipo === 'extra' ? 'Turno extra' : 'Tu propuesta'); }
   function abrirProponer(tipo, por) { P = { tipo: tipo, modo: 'banda', q: '', por: por || '' }; pasoBuscar(); }
   function pasoBuscar(res) {
-    var h = topProp(tituloTipo()) + '<h2>¿Qué banda?</h2>' + reglasDiscos() +
+    var h = topProp(tituloTipo(), false, 1) + '<h2>¿Qué banda?</h2>' + reglasDiscos() +
       '<form id="fb" class="row" style="flex-wrap:nowrap"><input type="text" id="qb" placeholder="' + (P.modo === 'banda' ? 'Nombre de la banda' : 'Nombre del disco') + '" value="' + esc(P.q) + '" autocomplete="off" style="flex:1">' +
       '<button class="btn small" type="submit">Buscar</button></form>' +
       '<button class="linkb" id="modo">' + (P.modo === 'banda' ? 'Buscar por nombre de disco' : 'Buscar por banda') + '</button>';
@@ -477,6 +542,7 @@
         var img = x.imagen ? '<img class="th" alt="" loading="lazy" src="' + esc(x.imagen) + '">' : '<span class="th"></span>';
         if (P.modo === 'banda') return '<button class="pick" data-i="' + i + '">' + img + '<span class="a"><b>' + esc(x.nombre) + '</b>' +
           (x.pista ? '<span>' + esc(x.pista) + '</span>' : (x.nombreDiscogs && x.nombreDiscogs !== x.nombre ? '<span>' + esc(x.nombreDiscogs) + '</span>' : '')) +
+          (x.ma ? '<span class="muted">Metal Archives: ' + esc([x.ma.pais, x.ma.genero].filter(Boolean).join(' · ')) + '</span>' : '') +
           (x.propuestos ? '<span class="gold">' + x.propuestos + (x.propuestos === 1 ? ' disco ya propuesto' : ' discos ya propuestos') + '</span>' : '') + '</span></button>';
         return '<button class="pick" data-i="' + i + '"' + (x.ya ? ' disabled' : '') + '>' + img + '<span class="a"><b>' + esc(x.titulo) + '</b><span>' + esc(x.banda) + (x.anio ? ' · ' + esc(x.anio) : '') + '</span>' +
           (x.ya ? '<span class="no">' + esc(x.ya.texto) + '</span>' : x.tributo ? '<span class="gold">¿Tributo?</span>' : '') + '</span></button>';
@@ -504,26 +570,34 @@
     if (!res) setTimeout(function () { var q = $('qb'); if (q) q.focus(); }, 50);
   }
   function cargarDiscografia(id) {
-    abrirHoja(topProp(tituloTipo(), true) + '<div class="spin"></div>'); $('back').onclick = function () { pasoBuscar(P.res); };
-    api('api_discografia', id).then(function (d) { P.disco = d; P.artista = d.artista; pasoDiscos(); })
-      .catch(function (e) { toast(errMsg(e)); pasoBuscar(P.res); });
+    abrirHoja(topProp(tituloTipo(), true, 2) + '<div class="spin"></div><p class="muted" style="text-align:center">Buscando los discos de la banda…</p>'); $('back').onclick = function () { pasoBuscar(P.res); };
+    P.bandaId = id; P.enDiscos = false; P.mbProm = null;
+    // Rápido: primero la lista de Discogs; el tipo de cada disco y el país (MusicBrainz, más lento) llegan por detrás
+    api('api_discografia', id, { rapido: true }).then(function (d) {
+      if (!P || P.bandaId !== id) return;
+      P.disco = d; P.artista = d.artista; pasoDiscos();
+      if (d.mbPendiente) {
+        P.mbProm = api('api_discografia', id).then(function (d2) {
+          if (!P || P.bandaId !== id) return;
+          P.disco = d2; P.artista = d2.artista;
+          if (P.enDiscos) pasoDiscos();
+        }).catch(function () { if (P && P.bandaId === id && P.disco) { P.disco.mbPendiente = false; if (P.enDiscos) pasoDiscos(); } });
+      }
+    }).catch(function (e) { toast(errMsg(e)); pasoBuscar(P.res); });
   }
   function pasoDiscos() {
     var d = P.disco, a = d.artista;
-    var h = topProp(tituloTipo(), true) + '<div class="rhead">' + (a.imagen ? '<img class="th lg" alt="" src="' + esc(a.imagen) + '">' : '') +
+    P.enDiscos = true;
+    var h = topProp(tituloTipo(), true, 2) + (d.mbPendiente ? '<div class="note" id="mbp">⏳ Comprobando cuáles son de estudio, en vivo o recopilatorios… ya puedes ir mirando la lista.</div>' : '') + '<div class="rhead">' + (a.imagen ? '<img class="th lg" alt="" src="' + esc(a.imagen) + '">' : '') +
       '<div class="ci"><span class="t">' + esc(a.nombre) + '</span><span class="m">' + esc(a.pais || 'País sin confirmar') + '</span>' +
       '<span class="m"><a target="_blank" rel="noopener" href="' + esc(a.metalArchives) + '">Metal Archives</a>' + (a.discogs ? ' · <a target="_blank" rel="noopener" href="' + esc(a.discogs) + '">Discogs</a>' : '') + '</span></div></div>';
-    if (d.historial && d.historial.n) {   // 3D
-      h += '<details class="note"><summary><b>' + esc(d.historial.texto) + '</b></summary><div class="list who-l hl2" style="margin-top:6px">' +
-        d.historial.rondas.map(function (r) { return '<div class="li"><span class="nm"><span class="num">#' + esc(r.numero) + '</span> ' + esc(r.disco) + '</span><span class="sg w">' + esc(r.ganadora || (r.estado !== 'cerrada' ? 'se está votando' : '')) + '</span></div>'; }).join('') + '</div></details>';
-    }
     if (d.tambien && d.tambien.length) {   // otras bandas y nombres del mismo artista
       h += '<div class="note"><b>También con:</b><div class="row" style="margin-top:8px">' + d.tambien.map(function (t) {
         return '<button class="fchip sm" data-art="' + esc(t.id) + '">' + esc(t.nombre) + (t.propuestos ? ' · ' + t.propuestos : '') + '</button>'; }).join('') + '</div></div>';
     }
     var colabs = d.discos.filter(function (x) { return x.valido && !x.ya && x.colab; });
     var validos = d.discos.filter(function (x) { return x.valido && !x.ya && !x.colab; }), yaP = d.discos.filter(function (x) { return x.ya; }),
-      otros = d.discos.filter(function (x) { return !x.valido && !x.ya; });
+      otros = [];
     var TIPOS = { estudio: '', sin_confirmar: 'por confirmar', recopilatorio: 'recopilatorio', en_vivo: 'en vivo', 'en vivo': 'en vivo', ep: 'EP', sencillo: 'sencillo' };
     var tipoTxt = function (t) { return TIPOS[t] !== undefined ? TIPOS[t] : String(t || '').replace(/_/g, ' '); };
     var fila = function (x, i) {
@@ -540,8 +614,17 @@
       return '<div class="pick" style="cursor:default"><span class="th"></span><span class="a"><b>' + esc(x.r.disco) + '</b><span>con ' + esc(x.con) + '</span>' +
         '<span class="no">Ya propuesto' + (x.r.numero ? ' en la #' + esc(x.r.numero) : '') + (x.r.ganadora ? ' · ganó «' + esc(x.r.ganadora) + '»' : (x.r.estado !== 'cerrada' ? ' · se está votando' : '')) + '</span></span></div>';
     };
-    if (yaP.length || rel.length) h += '<details class="note"' + (rel.length ? ' open' : '') + '><summary>Ya propuestos · ' + (yaP.length + rel.length) + '</summary><div class="list" style="margin-top:6px">' + yaP.map(fila).join('') + rel.map(filaRel).join('') + '</div></details>';
-    if (otros.length) h += '<details class="note"><summary>Otros que no valen · ' + otros.length + '</summary><div class="list" style="margin-top:6px">' + otros.map(fila).join('') + '</div></details>';
+    // 3D unido a «Ya propuestos»: una sola lista, con portada cuando el disco está en Discogs, y las propuestas del grupo que no encontramos allí
+    var vistos = {};
+    yaP.forEach(function (x) { if (x.ya && x.ya.id) vistos[x.ya.id] = 1; });
+    (d.tambien || []).forEach(function (tt) { (tt.rondas || []).forEach(function (r) { vistos[r.id] = 1; }); });
+    var sueltas = ((d.historial && d.historial.rondas) || []).filter(function (r) { return !vistos[r.id]; });
+    var filaSuelta = function (r) {
+      return '<div class="pick" style="cursor:default"><span class="th"></span><span class="a"><b>' + esc(r.disco) + '</b><span>' + esc(r.anio || '') + '</span>' +
+        '<span class="no">Ya propuesto' + (r.numero ? ' en la #' + esc(r.numero) : '') + (r.ganadora ? ' · ganó «' + esc(r.ganadora) + '»' : (r.estado !== 'cerrada' ? ' · se está votando' : '')) + '</span></span></div>';
+    };
+    var nYa = yaP.length + rel.length + sueltas.length;
+    if (nYa) h += '<details class="note" open><summary>Ya propuestos · ' + nYa + '</summary><div class="list" style="margin-top:6px">' + yaP.map(fila).join('') + rel.map(filaRel).join('') + sueltas.map(filaSuelta).join('') + '</div></details>';
     if (d.fuente === 'Discogs') h += '<a class="dgs" target="_blank" rel="noopener" href="' + esc(a.discogs || 'https://www.discogs.com') + '">Data provided by Discogs.</a>';
     h += '<button class="linkb" id="manual">No está el disco: escribirlo a mano</button>';
     abrirHoja(h);
@@ -563,7 +646,8 @@
     var e = P.ed, x = P.album;
     if (!e.encontrada) { pasoManual({ banda: e.banda || (P.artista && P.artista.nombre), disco: e.disco || x.titulo, anio: e.anio || x.anio, nota: e.nota }); return; }
     var img = e.portada || x.imagen || '';
-    var h = topProp(tituloTipo(), true);
+    P.enDiscos = false;
+    var h = topProp(tituloTipo(), true, 3);
     var fotosEd = (e.fotos && e.fotos.length) ? e.fotos : (img ? [{ uri: img, uri150: img }] : []);
     h += galHtml(fotosEd, '', 'Portada de ' + (e.disco || ''));
     h += '<div class="ci"><span class="b">' + esc(e.banda) + '</span><span class="t" style="font-family:var(--f-head);font-weight:800;font-size:28px;text-transform:uppercase;line-height:1.05">' + esc(e.disco) + '</span>' +
@@ -577,7 +661,7 @@
     if (e.fuente === 'Discogs') h += '<a class="dgs" target="_blank" rel="noopener" href="' + esc((e.enlaces && e.enlaces.discogs) || 'https://www.discogs.com') + '">Data provided by Discogs.</a>';
     h += '<label class="f">Presentación (opcional)<textarea id="pres" placeholder="Cuéntales al grupo por qué este disco">' + esc(P.pres || '') + '</textarea></label>' +
       '<label class="f">Enlace de Spotify o YouTube (opcional)<input type="text" id="lnk" placeholder="Pega aquí el enlace" value="' + esc(P.lnk || '') + '"></label>' +
-      '<button class="btn" id="go">Proponer «' + esc(e.disco) + '»</button>';
+      quePasa() + '<button class="btn" id="go">Proponer «' + esc(e.disco) + '»</button>';
     abrirHoja(h);
     galWire();
     $('back').onclick = function () { P.disco ? pasoDiscos() : pasoBuscar(P.res); };
@@ -588,6 +672,9 @@
       l.querySelectorAll('[data-e]').forEach(function (b) { b.onclick = function () { guardarTextos(); cargarEdicion(P.album, Number(b.getAttribute('data-e'))); }; });
     };
     $('go').onclick = function () {
+      var bgo = this;
+      if (!bgo.getAttribute('data-ok')) { bgo.setAttribute('data-txt0', bgo.textContent); confirmar(bgo, function () {}); return; }   // primer toque: «¿Seguro? Toca otra vez»
+      bgo.removeAttribute('data-ok'); bgo.classList.remove('alerta');
       guardarTextos();
       var l = P.lnk || '';
       enviar({ banda: e.banda, disco: e.disco, anio: e.anio, pais: P.artista && P.artista.pais, pais_banda: P.artista && P.artista.pais,
@@ -599,13 +686,14 @@
   function guardarTextos() { if ($('pres')) P.pres = $('pres').value; if ($('lnk')) P.lnk = $('lnk').value.trim(); }
   function pasoManual(pre) {   // 3E: último recurso; Chiquito lo revisa
     pre = pre || {};
-    var h = topProp(tituloTipo(), true) + '<h2>Escribirlo a mano</h2><div class="note">Úsalo solo si la búsqueda no lo encuentra. Chiquito lo revisa antes de cerrarlo.' + (pre.nota ? '<br>' + esc(pre.nota) : '') + '</div>' +
+    P.enDiscos = false;
+    var h = topProp(tituloTipo(), true, 3) + '<h2>Escribirlo a mano</h2><div class="note">Úsalo solo si la búsqueda no lo encuentra. Chiquito lo revisa antes de cerrarlo.' + (pre.nota ? '<br>' + esc(pre.nota) : '') + '</div>' +
       '<label class="f">Banda<input type="text" id="mb" value="' + esc(pre.banda || '') + '"></label>' +
       '<label class="f">Disco<input type="text" id="md" value="' + esc(pre.disco || '') + '"></label>' +
       '<div class="row"><label class="f" style="flex:1">Año<input type="text" id="ma" inputmode="numeric" value="' + esc(pre.anio || '') + '"></label><label class="f" style="flex:2">País de la banda<input type="text" id="mp" value="' + esc((P.artista && P.artista.pais) || '') + '"></label></div>' +
       '<label class="f">Canciones (una por línea, en orden)<textarea id="mc" style="min-height:180px"></textarea></label>' +
       '<label class="f">Presentación (opcional)<textarea id="pres">' + esc(P.pres || '') + '</textarea></label>' +
-      '<button class="btn" id="go">Proponer</button>';
+      quePasa() + '<button class="btn" id="go">Proponer</button>';
     abrirHoja(h);
     $('back').onclick = function () { P.disco ? pasoDiscos() : pasoBuscar(P.res); };
     $('go').onclick = function () {
@@ -618,14 +706,29 @@
     d.tipo = P.tipo === 'cumpleaños' ? 'cumpleaños' : 'normal';
     d.presentacion = P.pres || '';
     if (P.por) d.por = P.por;
-    var txt = boton.textContent; boton.disabled = true; boton.textContent = 'Guardando…';
-    api('api_propose', d).then(function (r) {
+    var txt = boton.getAttribute('data-txt0') || boton.textContent; boton.disabled = true; boton.textContent = 'Guardando…';
+    var antes = (P.mbProm && !d.manual && !d.pais_banda) ? P.mbProm.then(function () { if (P.artista && P.artista.pais) { d.pais = d.pais || P.artista.pais; d.pais_banda = P.artista.pais; } }) : Promise.resolve();
+    antes.then(function () { return api('api_propose', d); }).then(function (r) {
       var h = topProp('Listo') + '<div class="winner"><span class="k" style="color:var(--gold)">Propuesta abierta</span><span class="s">' + esc(d.disco) + '</span><span class="muted">' + esc(d.banda) + ' · ya se puede votar en la app</span></div>' +
         cajaMensaje(r.mensaje, 'Anúncialo en el grupo') + (r.arranca ? cajaMensaje(r.arranca, 'Y esta empieza una ronda nueva') : '') +
-        '<button class="btn ghost" id="verla">Ver la propuesta</button>';
+        '<div class="note"><b>Y ahora:</b> copia el mensaje de arriba y pégalo en el grupo de WhatsApp. Los demás votan desde la app; tú también puedes votar ya.</div>' +
+        '<button class="btn ghost" id="verla">Ver la propuesta y votar</button>' +
+        (S && S.me && S.me.esAdmin ? '<button class="linkb" id="erapru">¿Era una prueba? Corregirla o cancelarla</button>' : '');
       abrirHoja(h); $('back').onclick = cerrarHoja; $('verla').onclick = function () { abrirRonda(r.id); };
+      if ($('erapru')) $('erapru').onclick = function () { editarRonda(r.id); };
       cargar(true);
-    }).catch(function (e) { toast(errMsg(e)); boton.disabled = false; boton.textContent = txt; });
+    }).catch(function (e) {
+      if (!(e && e.red)) { toast(errMsg(e)); boton.disabled = false; boton.textContent = txt; return; }
+      // Se cortó la conexión justo al guardar: se comprueba si la propuesta quedó abierta, para no mandarla dos veces
+      boton.textContent = 'Comprobando…';
+      api('api_state').then(function (st) {
+        S = st; memoPon('estado', st);
+        var n = function (x) { return String(x || '').toLowerCase().replace(/\s+/g, ' ').trim(); };
+        var ya = (st.abiertas || []).filter(function (r) { return n(r.banda) === n(d.banda) && n(r.disco) === n(d.disco); })[0];
+        if (ya) { toast('La propuesta SÍ quedó guardada'); cerrarHoja(); render(); abrirRonda(ya.id); return; }
+        toast('La propuesta NO se guardó (se cortó la conexión). Toca «Proponer» otra vez.'); boton.disabled = false; boton.textContent = txt;
+      }).catch(function () { toast('Sin conexión. Antes de repetirla, abre la app de nuevo y mira si la propuesta ya aparece.'); boton.disabled = false; boton.textContent = txt; });
+    });
   }
 
   /* ---------- Historial (4A–4F) ---------- */
@@ -715,10 +818,24 @@
   /* ---------- Números (5A–5D) ---------- */
   function pct(n) { return (Math.round(Number(n) * 10) / 10).toString().replace('.', ',') + ' %'; }
   function miles(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
-  function ranking(titulo, que, lista, valor, extra) {
+  function botonMas(txt, cuerpo) { return '<button class="btn ghost small mas" data-mas="' + esc(txt) + '">' + esc(txt) + ' ▾</button><div class="rk-todos" hidden>' + cuerpo + '</div>'; }
+  function ranking(titulo, que, lista, valor, extra, todos, txtMas) {
     if (!lista || !lista.length) return '';
-    return '<div class="rank"><div class="rk-h"><b>' + titulo + '</b><span class="muted">' + que + '</span></div>' +
-      lista.map(function (x, i) { return '<div class="rk"><span class="pos">' + (i + 1) + '</span><span class="nm">' + esc(x.nombre || (x.a + ' & ' + x.b)) + '</span><span class="v">' + valor(x) + '</span></div>' + (extra ? extra(x, i) : ''); }).join('') + '</div>';
+    var fila = function (x, i) { return '<div class="rk"><span class="pos">' + (i + 1) + '</span><span class="nm">' + esc(x.nombre || (x.a + ' & ' + x.b)) + '</span><span class="v">' + valor(x) + '</span></div>' + (extra ? extra(x, i) : ''); };
+    var mas = todos && todos.length > lista.length ? botonMas(txtMas || 'Mostrar todos (' + todos.length + ')', todos.map(fila).join('')) : '';
+    return '<div class="rank"><div class="rk-h"><b>' + titulo + '</b><span class="muted">' + que + '</span></div><div class="rk-top">' + lista.map(fila).join('') + '</div>' + mas + '</div>';
+  }
+  /** Récords con lista de rondas: los primeros y «Mostrar más». */
+  function rankingRondas(titulo, que, lista, todas, derecha) {
+    if (!lista || !lista.length) return '';
+    var fila = function (r) { return filaRonda(r, derecha(r)); };
+    var mas = todas && todas.length > lista.length ? botonMas('Mostrar las ' + todas.length + ' primeras', '<div class="list">' + todas.map(fila).join('') + '</div>') : '';
+    return '<div class="rank"><div class="rk-h"><b>' + titulo + '</b>' + (que ? '<span class="muted">' + que + '</span>' : '') + '</div><div class="list rk-top">' + lista.map(fila).join('') + '</div>' + mas + '</div>';
+  }
+  function barrasMas(titulo, que, arr, n, fmt) {
+    if (!arr || !arr.length) return '';
+    var mas = arr.length > n ? botonMas('Mostrar todos (' + arr.length + ')', barrasSimple(arr, fmt)) : '';
+    return '<div class="rank"><div class="rk-h"><b>' + titulo + '</b>' + (que ? '<span class="muted">' + que + '</span>' : '') + '</div><div class="rk-top">' + barrasSimple(arr.slice(0, n), fmt) + '</div>' + mas + '</div>';
   }
   function barrasSimple(arr, fmt) {
     var max = Math.max.apply(null, arr.map(function (x) { return x[1]; }).concat([1]));
@@ -729,40 +846,58 @@
   function filaRonda(r, derecha) {
     return '<button class="hrow" data-r="' + esc(r.id) + '"><span class="num" style="min-width:44px">#' + esc(r.numero) + '</span><span class="a"><span class="t1">' + esc(r.banda) + ' – ' + esc(r.disco) + '</span><span class="w">' + esc(r.ganadora || '') + '</span></span>' + (derecha ? '<span class="muted" style="margin-left:auto;font-size:12.5px;text-align:right;white-space:nowrap">' + derecha + '</span>' : '') + '</button>';
   }
-  var NUM = null;
+  var NUM = null, NUM_AT = 0;
   function vistaNumeros() {
     var v = $('view');
     v.innerHTML = '<div class="pagehead"><h2>Números</h2></div><div class="spin"></div>';
-    v.onclick = function (e) { var t = e.target.closest('[data-r]'); if (t) abrirRonda(t.getAttribute('data-r')); };
-    (NUM ? Promise.resolve(NUM) : api('api_stats11')).then(function (s) {
+    v.onclick = function (e) {
+      var m = e.target.closest('[data-mas]');
+      if (m) {   // la lista completa sustituye a la corta (no se repiten los primeros)
+        var box = m.nextElementSibling, corta = m.previousElementSibling, abrir = box.hidden;
+        box.hidden = !abrir; if (corta && corta.classList.contains('rk-top')) corta.hidden = abrir;
+        m.textContent = abrir ? 'Mostrar menos ▴' : m.getAttribute('data-mas') + ' ▾';
+        return;
+      }
+      var t = e.target.closest('[data-r]'); if (t) abrirRonda(t.getAttribute('data-r'));
+    };
+    var pintaNum = function (s) {
       NUM = s; var rc = s.records, pr = s.proponentes, rk = s.rankings;
       var h = '<div class="pagehead"><h2>Números</h2><span class="k">' + miles(s.rondas) + ' rondas</span></div>';
       h += '<div class="tiles"><div class="tile"><b>' + miles(s.rondas) + '</b><span class="muted">rondas cerradas</span></div><div class="tile"><b>' + miles(s.bandas) + '</b><span class="muted">bandas distintas</span></div>' +
         '<div class="tile"><b>' + rc.empates + '</b><span class="muted">empates · ' + rc.empatesDoble + ' los decidió el voto doble</span></div><div class="tile"><b>' + pct(rc.tituloGana) + '</b><span class="muted">de las veces gana la canción que da nombre al disco</span></div></div>';
+      var td = rk.todos || {}, ptd = pr.todos || {};
       h += '<span class="k sec-t">Los que votan</span>';
-      h += ranking('Participación', 'de las rondas en que estaba', rk.participacion, function (x) { return pct(x.participacion); });
-      h += ranking('Ojo de ganador', 'votó por la que ganó', rk.ojo, function (x) { return pct(x.ojo); });
-      h += ranking('Lobo solitario', 'votó una que nadie más votó', rk.lobo, function (x) { return pct(x.solo); });
-      h += ranking('Racha', 'rondas seguidas votando', rk.racha, function (x) { return x.racha + (x.rachaActual === x.racha ? ' <span class="chip done" style="font-size:9px;padding:2px 6px">sigue</span>' : ''); });
+      h += ranking('Participación', 'De las rondas en las que estaba en el grupo, a cuántas respondió con un voto', rk.participacion, function (x) { return pct(x.participacion); }, null, td.participacion);
+      h += ranking('Ojo de ganador', 'Con qué frecuencia su voto fue para la canción que terminó ganando', rk.ojo, function (x) { return pct(x.ojo); }, null, td.ojo);
+      h += ranking('Lobo solitario', 'Con qué frecuencia votó una canción que nadie más votó', rk.lobo, function (x) { return pct(x.solo); }, null, td.lobo);
+      h += ranking('Racha', 'Más rondas seguidas votando sin faltar', rk.racha, function (x) { return x.racha + (x.rachaActual === x.racha ? ' <span class="chip done" style="font-size:9px;padding:2px 6px">sigue</span>' : ''); }, null, td.racha);
       h += '<span class="k sec-t">Afinidad</span>';
-      h += ranking('Almas gemelas', 'votan lo mismo', s.almas, function (x) { return pct(x.pct); });
-      h += ranking('Polos opuestos', 'casi nunca coinciden', s.opuestos, function (x) { return pct(x.pct); });
+      h += ranking('Almas gemelas', 'Parejas que más veces votaron la misma canción en las mismas rondas', s.almas, function (x) { return pct(x.pct); }, null, s.almasTodas, 'Mostrar las 50 primeras');
+      h += ranking('Polos opuestos', 'Parejas que menos veces votaron la misma canción en las mismas rondas', s.opuestos, function (x) { return pct(x.pct); }, null, s.opuestosTodos, 'Mostrar las 50 primeras');
       h += '<span class="k sec-t">Los que proponen</span>';
-      h += ranking('El profeta', 'su propia canción gana', (pr.profeta || []).slice(0, 5), function (x) { return pct(x.profeta); });
-      h += ranking('El que une', 'consenso en sus discos', (pr.une || []).slice(0, 5), function (x) { return pct(x.une); });
-      h += ranking('El explorador', 'bandas nuevas para el grupo', (pr.explorador || []).slice(0, 5), function (x) { return pct(x.explorador); });
-      h += ranking('El arqueólogo', 'año medio de sus discos', (pr.arqueologo || []).slice(0, 3), function (x) { return x.edad; });
-      h += ranking('El moderno', 'año medio de sus discos', (pr.moderno || []).slice(0, 3), function (x) { return x.edad; });
+      h += ranking('El profeta', 'En sus propias propuestas, qué porcentaje de las veces ganó la canción que él mismo votó', pr.profeta, function (x) { return pct(x.profeta); }, null, ptd.profeta);
+      h += ranking('El que une', 'Qué tan de acuerdo estuvo el grupo con sus discos: más alto = los votos se juntaron en una sola canción', pr.une, function (x) { return pct(x.une); }, null, ptd.une);
+      h += ranking('El explorador', 'Qué porcentaje de sus propuestas fue una banda que el grupo nunca había propuesto', pr.explorador, function (x) { return pct(x.explorador); }, null, ptd.explorador);
+      h += ranking('El arqueólogo', 'Año medio de los discos que propone: los más antiguos primero', pr.arqueologo, function (x) { return x.edad; }, null, ptd.arqueologo);
+      h += ranking('El moderno', 'Año medio de los discos que propone: los más recientes primero', pr.moderno, function (x) { return x.edad; }, null, ptd.moderno);
       h += '<span class="k sec-t">Récords</span>';
-      h += '<div class="rank"><div class="rk-h"><b>Las más unánimes</b></div><div class="list">' + rc.unanimes.slice(0, 5).map(function (r) { return filaRonda(r, r.ganadoraVotos + ' de ' + r.votos); }).join('') + '</div></div>';
-      h += '<div class="rank"><div class="rk-h"><b>Las más divididas</b></div><div class="list">' + rc.divididas.slice(0, 5).map(function (r) { return filaRonda(r, r.distintas + ' canciones'); }).join('') + '</div></div>';
-      h += '<div class="rank"><div class="rk-h"><b>Las bandas más propuestas</b></div>' + barrasSimple(rc.topBandas.slice(0, 10)) + '</div>';
-      h += '<div class="rank"><div class="rk-h"><b>Por década</b><span class="muted">año del disco</span></div>' + barrasSimple(s.decadas.map(function (d) { return [d[0].replace(/^19|^20/, "'").replace('s', 's'), d[1]]; })) + '</div>';
-      if (s.estilos && s.estilos.length) h += '<div class="rank"><div class="rk-h"><b>Por estilo</b><span class="muted">según Discogs (un disco puede tener varios)</span></div>' + barrasSimple(s.estilos) + '</div>';
-      if (s.paises && s.paises.length) h += '<div class="rank"><div class="rk-h"><b>Por país</b><span class="muted">país de la banda</span></div>' + barrasSimple(s.paises) + '</div>';
+      h += rankingRondas('Las más unánimes', 'Propuestas donde más gente votó la misma canción (mínimo 8 votos)', rc.unanimes, rc.unanimesTodas, function (r) { return r.ganadoraVotos + ' de ' + r.votos; });
+      h += rankingRondas('Las más divididas', 'Propuestas con más canciones distintas votadas (mínimo 8 votos)', rc.divididas, rc.divididasTodas, function (r) { return r.distintas + ' canciones'; });
+      h += barrasMas('Las bandas más propuestas', 'Cuántos de sus discos se han propuesto en el grupo', rc.topBandas, 10);
+      h += '<div class="rank"><div class="rk-h"><b>Por década</b><span class="muted">Cuántos discos propuestos salieron en cada década</span></div>' + barrasSimple(s.decadas.map(function (d) { return [d[0].replace(/^19|^20/, "'").replace('s', 's'), d[1]]; })) + '</div>';
+      if (s.estilos && s.estilos.length) h += barrasMas('Por estilo', 'Según Discogs; un disco puede tener varios estilos', s.estilos, 10);
+      if (s.paises && s.paises.length) h += barrasMas('Por país', 'País de origen de la banda de cada disco propuesto', s.paises, 10);
       h += '<p class="foot">Las rondas del historial cuentan solo mientras cada uno estaba en el grupo.</p>';
       v.innerHTML = h;
-    }).catch(function (e) { v.innerHTML = '<div class="pagehead"><h2>Números</h2></div><div class="err">' + esc(errMsg(e)) + '</div>'; });
+    };
+    var mem = NUM || memoLee('numeros'), fresco = NUM_AT && Date.now() - NUM_AT < 120000;
+    if (mem) pintaNum(mem);
+    if (fresco) return;
+    api('api_stats11').then(function (s) {
+      NUM_AT = Date.now(); memoPon('numeros', s);
+      if (mem && JSON.stringify(s) === JSON.stringify(mem)) { NUM = s; return; }
+      if (TAB === 'numeros' && !v.querySelector('.rk-todos:not([hidden])')) pintaNum(s); else NUM = s;
+    }).catch(function (e) { if (!mem) v.innerHTML = '<div class="pagehead"><h2>Números</h2></div><div class="err">' + esc(errMsg(e)) + '</div>'; });
   }
 
   /* ---------- Yo (6A–6G) ---------- */

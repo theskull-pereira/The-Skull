@@ -251,3 +251,24 @@ select.sel:disabled,input:disabled{opacity:.55}
 .row > label.f{flex:1;min-width:0}
 .reglas p{margin:0 0 12px;font-size:15px;line-height:1.5;color:var(--dust)}
 .reglas b{color:var(--bone)}
+
+/* Tarjeta de turno (14-nov): quien tiene que proponer lo ve enseguida */
+.turno{background:var(--slab);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.turno .t1{font-family:var(--f-head);font-weight:800;font-size:20px;text-transform:uppercase;letter-spacing:.02em;line-height:1.1}
+.turno .t2{color:var(--dust);font-size:14px}
+.turno.mio{background:linear-gradient(160deg,#3a1114,var(--slab) 80%);border:2px solid var(--blood)}
+.turno.mio .btn{padding:16px;font-size:17px;text-transform:uppercase;letter-spacing:.03em}
+.turno.cumple{background:linear-gradient(160deg,var(--gold-soft),var(--slab) 80%);border-color:#4a3f1f}
+
+.rank .mas{margin-top:8px;align-self:flex-start}
+.rk-todos{margin-top:6px}
+.rk-todos[hidden]{display:none}
+.rk-top[hidden]{display:none}
+
+/* Proponer: barra de pasos y «qué va a pasar» (14-nov) */
+.pasos{display:flex;gap:6px;margin:10px 0 14px}
+.pasos span{flex:1;display:flex;align-items:center;gap:6px;padding:8px 8px;border-radius:10px;border:1px solid rgba(255,255,255,.12);font-size:12px;line-height:1.15;color:var(--muted,#9a96a3)}
+.pasos span i{font-style:normal;flex:none;width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;border:1px solid currentColor;font-size:11px}
+.pasos span.on{color:#fff;border-color:var(--gold,#c9a24a);background:rgba(201,162,74,.12);font-weight:600}
+.pasos span.ya{color:var(--gold,#c9a24a)}
+.pasara ol{margin:8px 0 8px 20px;padding:0;display:flex;flex-direction:column;gap:6px}
