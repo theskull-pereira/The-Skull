@@ -300,3 +300,11 @@ select.sel:disabled,input:disabled{opacity:.55}
 @font-face{font-family:"Pirata One";src:url("fonts/PirataOne-Regular.ttf") format("truetype");font-display:swap}
 /* Pantalla de votar: portada más pequeña para que la lista de canciones se vea antes (14-nov, Carlos) */
 .big{max-width:190px}
+
+.rk.af .nm{display:flex;flex-direction:column;gap:2px}
+.rk.af .afl{font-size:14px;color:var(--dust)}
+.rk.af .afl i{font-style:normal;color:var(--gold);font-family:var(--f-mono);margin-left:6px}
+
+button.sb.toca{background:none;border:0;color:inherit;font:inherit;width:100%;text-align:left;cursor:pointer;padding-left:0;padding-right:0}
+button.sb.toca>span:first-child{text-decoration:underline;text-underline-offset:3px}
+.filtro-est{display:flex;flex-wrap:wrap;align-items:center;gap:8px}

@@ -134,7 +134,7 @@
       if (!silencioso || !$('tabs').innerHTML) tabs(); if (!silencioso || TAB === 'inicio') render();
     }).catch(function (e) {
       if (silencioso) return;
-      if (deMemoria && e && e.red) { toast('Sin conexión: ves lo último que se guardó'); return; }
+      if (deMemoria && e && e.red) { toast('Sin conexión: Ves lo último que se guardó'); return; }
       if (deMemoria) { S = null; memoBorra(); $('tabs').hidden = true; }
       if (e && e.red) {   // fallo de conexión: no es problema del enlace
         $('view').innerHTML = '<div class="hero"></div><div class="err">' + esc(errMsg(e)) + '</div><button class="btn" id="reint">Reintentar</button>';
@@ -189,7 +189,7 @@
     if (d === null) return '';
     if (d <= 0) return '<span class="lim hot">Se cierra hoy</span>';
     if (d === 1) return '<span class="lim hot">Se cierra mañana</span>';
-    return '<span class="lim">Se cierra a más tardar el ' + esc(fCorta(r.fecha_limite)) + '</span>';
+    return '<span class="lim">Cierre previsto: ' + esc(fCorta(r.fecha_limite)) + '</span>';
   }
   function tarjeta(r) {
     var pct = r.total ? Math.round(r.votaron * 100 / r.total) : 0;
@@ -219,10 +219,10 @@
         '<span class="t2">Elige una banda y un disco para que el grupo lo vote.</span><button class="btn" data-prop="normal">Proponer un disco</button></div>';
     } else if (sig) {
       h += '<div class="turno"><span class="t1">Ahora le toca proponer a ' + esc(sig) + '</span>' +
-        '<span class="t2">' + (llenas ? 'Ya hay el máximo de propuestas abiertas: podrá proponer cuando se cierre una.' : 'Cuando lo haga, aparecerá aquí para que votes.') + '</span>' +
+        '<span class="t2">' + (llenas ? 'Ya hay el máximo de propuestas abiertas: Podrá proponer cuando se cierre una.' : 'Cuando lo haga, aparecerá aquí para que votes.') + '</span>' +
         (S.me.esAdmin && S.puedo.porOtro && !llenas ? '<button class="btn ghost small" data-prop="normal" data-por="' + esc(sig) + '">Proponer en nombre de ' + esc(sig) + '</button>' : '') + '</div>';
     }
-    if (S.puedo.cumple) h += '<div class="turno cumple"><span class="t1">🎂 Tienes una propuesta de cumpleaños</span><span class="t2">Va aparte del turno normal: elige tu disco cuando quieras.</span>' +
+    if (S.puedo.cumple) h += '<div class="turno cumple"><span class="t1">🎂 Tienes una propuesta de cumpleaños</span><span class="t2">Va aparte del turno normal: Elige tu disco cuando quieras.</span>' +
       '<button class="btn goldb" data-prop="cumpleaños">Hacer mi propuesta de cumpleaños</button></div>';
     if (S.puedo.extra) h += '<button class="btn ghost" data-prop="extra">Pedir un turno extra</button>';
 
@@ -370,7 +370,7 @@
 
     var arr = conteo(r), totalVotos = (r.lista || []).filter(function (x) { return x.estado === 'voto'; }).length;
     if (abierta || r.estado === 'whatsapp') {
-      var lim = r.fecha_limite ? 'Se cierra a más tardar el ' + fLarga(r.fecha_limite) : (r.estado === 'whatsapp' ? (r.votaEnApp ? 'Se vota en el chat y aquí' : 'Se está votando en WhatsApp') : '');
+      var lim = r.fecha_limite ? 'Cierre previsto: ' + fLarga(r.fecha_limite) + ' (la cierra Chiquito)' : (r.estado === 'whatsapp' ? (r.votaEnApp ? 'Se vota en el chat y aquí' : 'Se está votando en WhatsApp') : '');
       h += '<div class="status"><span class="muted">' + esc(lim) + '</span><span class="num" style="color:var(--bone)">' + totalVotos + ' de ' + (r.lista || []).length + '</span></div>';
     }
     if (extra) h += extra;
@@ -503,7 +503,7 @@
     var rid = CUR.id;
     function hecho(r) {
       CUR = r; RMEM[rid] = r; EDIT = false; SEL = cancion === ABST ? '' : cancion;
-      toast(cancion === ABST ? 'Listo: te abstuviste' : 'Voto guardado');
+      toast(cancion === ABST ? 'Listo: Te abstuviste' : 'Voto guardado');
       dibujarRonda(cancion === ABST || !r.compartir ? '' : cajaMensaje(r.compartir, 'Comparte tu voto en el grupo'));
       cargar(true);
     }
@@ -514,7 +514,7 @@
       api('api_round', rid).then(function (r) {
         if (r.miVoto === cancion) { hecho(r); return; }
         toast('El voto NO se guardó (se cortó la conexión). Tócalo otra vez.'); boton.disabled = false; boton.textContent = txt;
-      }).catch(function () { toast('Sin conexión. No sabemos si el voto llegó: abre la app de nuevo en un momento y mira.'); boton.disabled = false; boton.textContent = txt; });
+      }).catch(function () { toast('Sin conexión. No sabemos si el voto llegó: Abre la app de nuevo en un momento y mira.'); boton.disabled = false; boton.textContent = txt; });
     });
   }
 
@@ -560,7 +560,7 @@
       }).join('') + '</div>';
       if (res.fuente === 'Discogs') h += '<span class="dgs">Data provided by Discogs.</span>';
     }
-    h += '<button class="linkb" id="manual">No lo encuentro: escribirlo a mano</button>';
+    h += '<button class="linkb" id="manual">No lo encuentro: Escribirlo a mano</button>';
     abrirHoja(h);
     $('back').onclick = cerrarHoja;
     $('modo').onclick = function () { P.modo = P.modo === 'banda' ? 'disco' : 'banda'; pasoBuscar(); };
@@ -637,7 +637,7 @@
     var nYa = yaP.length + rel.length + sueltas.length;
     if (nYa) h += '<details class="note" open><summary>Ya propuestos · ' + nYa + '</summary><div class="list" style="margin-top:6px">' + yaP.map(fila).join('') + rel.map(filaRel).join('') + sueltas.map(filaSuelta).join('') + '</div></details>';
     if (d.fuente === 'Discogs') h += '<a class="dgs" target="_blank" rel="noopener" href="' + esc(a.discogs || 'https://www.discogs.com') + '">Data provided by Discogs.</a>';
-    h += '<button class="linkb" id="manual">No está el disco: escribirlo a mano</button>';
+    h += '<button class="linkb" id="manual">No está el disco: Escribirlo a mano</button>';
     abrirHoja(h);
     $('back').onclick = function () { pasoBuscar(P.res); };
     $('manual').onclick = function () { pasoManual({ banda: a.nombre }); };
@@ -759,11 +759,14 @@
     }
     v.innerHTML = '<div class="pagehead"><h2>Historial</h2>' + (H.total && !H.playlist ? '<span class="k">' + H.total + ' rondas</span>' : '') + '</div>' +
       (H.playlist ? '' : '<form id="hs"><input type="search" id="hq" placeholder="Buscar: #627, banda, disco, canción, miembro, año" value="' + esc(H.q) + '"></form>') +
-      '<div class="chips">' + chips + '</div>' + filtros + '<div id="hl"><div class="spin"></div></div>';
+      '<div class="chips">' + chips + '</div>' + filtros +
+      (H.filtro === 'estilo' && !H.playlist ? '<div class="note filtro-est">Estilo: <b>' + esc(H.valor) + '</b><button class="btn small ghost" id="festx">Quitar filtro ✕</button><button class="btn small ghost" id="festn">‹ Volver a Números</button></div>' : '') + '<div id="hl"><div class="spin"></div></div>';
     v.querySelectorAll('[data-v]').forEach(function (b) { b.onclick = function () { var x = b.getAttribute('data-v'); if (x === 'playlist') { H.playlist = true; } else { H.playlist = false; H.vista = x; } cargarHist(); }; });
     v.querySelectorAll('[data-f]').forEach(function (b) { b.onclick = function () { H.filtro = b.getAttribute('data-f'); H.valor = ''; cargarHist(); }; });
     var fd = $('fdec'); if (fd) fd.onchange = function () { H.filtro = fd.value ? 'decada' : ''; H.valor = fd.value; cargarHist(); };
     var fm = $('fmie'); if (fm) fm.onchange = function () { H.filtro = fm.value ? 'miembro' : ''; H.valor = fm.value; cargarHist(); };
+    var fx = $('festx'); if (fx) fx.onclick = function () { H.filtro = ''; H.valor = ''; cargarHist(); };
+    var fn = $('festn'); if (fn) fn.onclick = function () { H.filtro = ''; H.valor = ''; TAB = 'numeros'; $('tabs').querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-tab') === 'numeros'); }); render(); };
     var hs = $('hs'); if (hs) hs.onsubmit = function (e) { e.preventDefault(); H.q = $('hq').value.trim(); $('hq').blur(); cargarHist(); };
     v.onclick = function (e) { var t = e.target.closest('[data-r]'); if (t) abrirRonda(t.getAttribute('data-r')); };
   }
@@ -814,6 +817,9 @@
     api('api_playlist', { letra: H.letra || 'A' }).then(function (p) {
       H.letra = p.letra || 'A';
       var h = '<div class="letters">' + p.letras.map(function (l) { return '<button class="fchip sm' + (l === H.letra ? ' on' : '') + '" data-l="' + esc(l) + '">' + esc(l) + '</button>'; }).join('') + '</div>' +
+        ((S.playlists && (S.playlists.spotify || S.playlists.youtube)) ? '<div class="note"><b>Escucha la playlist de The Skull</b><div class="row" style="margin-top:8px">' +
+          (S.playlists.spotify ? '<a class="btn ghost" target="_blank" rel="noopener" href="' + esc(S.playlists.spotify) + '">Spotify ›</a>' : '') +
+          (S.playlists.youtube ? '<a class="btn ghost" target="_blank" rel="noopener" href="' + esc(S.playlists.youtube) + '">YouTube ›</a>' : '') + '</div></div>' : '') +
         '<div class="row"><button class="btn ghost" id="pcopy">Copiar la ' + esc(H.letra) + ' para WhatsApp</button></div>' +
         '<div class="plist">' + p.bandas.map(function (b) {
           return '<div class="pb"><b>' + esc(b.banda) + '</b>' + b.discos.map(function (d) {
@@ -832,7 +838,7 @@
   function botonMas(txt, cuerpo) { return '<button class="btn ghost small mas" data-mas="' + esc(txt) + '">' + esc(txt) + ' ▾</button><div class="rk-todos" hidden>' + cuerpo + '</div>'; }
   function ranking(titulo, que, lista, valor, extra, todos, txtMas) {
     if (!lista || !lista.length) return '';
-    var fila = function (x, i) { return '<div class="rk"><span class="pos">' + (i + 1) + '</span><span class="nm">' + esc(x.nombre || (x.a + ' & ' + x.b)) + '</span><span class="v">' + valor(x) + '</span></div>' + (extra ? extra(x, i) : ''); };
+    var fila = function (x, i) { return '<div class="rk"><span class="pos">' + (i + 1) + '</span><span class="nm">' + esc(x.nombre || (x.a + ' & ' + x.b)) + (x.pocos ? ' <span class="muted" style="font-size:12px">(' + x.votos + (x.votos === 1 ? ' voto' : ' votos') + ')</span>' : '') + '</span><span class="v">' + valor(x) + '</span></div>' + (extra ? extra(x, i) : ''); };
     var mas = todos && todos.length > lista.length ? botonMas(txtMas || 'Mostrar todos (' + todos.length + ')', todos.map(fila).join('')) : '';
     return '<div class="rank"><div class="rk-h"><b>' + titulo + '</b><span class="muted">' + que + '</span></div><div class="rk-top">' + lista.map(fila).join('') + '</div>' + mas + '</div>';
   }
@@ -843,14 +849,15 @@
     var mas = todas && todas.length > lista.length ? botonMas('Mostrar las ' + todas.length + ' primeras', '<div class="list">' + todas.map(fila).join('') + '</div>') : '';
     return '<div class="rank"><div class="rk-h"><b>' + titulo + '</b>' + (que ? '<span class="muted">' + que + '</span>' : '') + '</div><div class="list rk-top">' + lista.map(fila).join('') + '</div>' + mas + '</div>';
   }
-  function barrasMas(titulo, que, arr, n, fmt) {
+  function barrasMas(titulo, que, arr, n, fmt, toca) {
     if (!arr || !arr.length) return '';
-    var mas = arr.length > n ? botonMas('Mostrar todos (' + arr.length + ')', barrasSimple(arr, fmt)) : '';
-    return '<div class="rank"><div class="rk-h"><b>' + titulo + '</b>' + (que ? '<span class="muted">' + que + '</span>' : '') + '</div><div class="rk-top">' + barrasSimple(arr.slice(0, n), fmt) + '</div>' + mas + '</div>';
+    var mas = arr.length > n ? botonMas('Mostrar todos (' + arr.length + ')', barrasSimple(arr, fmt, toca)) : '';
+    return '<div class="rank"><div class="rk-h"><b>' + titulo + '</b>' + (que ? '<span class="muted">' + que + '</span>' : '') + '</div><div class="rk-top">' + barrasSimple(arr.slice(0, n), fmt, toca) + '</div>' + mas + '</div>';
   }
-  function barrasSimple(arr, fmt) {
+  function barrasSimple(arr, fmt, toca) {   // toca: nombre del atributo si cada fila se puede tocar (p. ej. 'data-estilo')
     var max = Math.max.apply(null, arr.map(function (x) { return x[1]; }).concat([1]));
     return '<div class="sec">' + arr.map(function (x) {
+      if (toca) return '<button type="button" class="sb toca" ' + toca + '="' + esc(x[0]) + '"><span>' + esc(x[0]) + ' ›</span><span class="bb"><i style="width:' + Math.round(x[1] * 100 / max) + '%"></i></span><span class="v">' + (fmt ? fmt(x[1]) : x[1]) + '</span></button>';
       return '<div class="sb"><span>' + esc(x[0]) + '</span><span class="bb"><i style="width:' + Math.round(x[1] * 100 / max) + '%"></i></span><span class="v">' + (fmt ? fmt(x[1]) : x[1]) + '</span></div>';
     }).join('') + '</div>';
   }
@@ -869,6 +876,12 @@
         m.textContent = abrir ? 'Mostrar menos ▴' : m.getAttribute('data-mas') + ' ▾';
         return;
       }
+      var es = e.target.closest('[data-estilo]');
+      if (es) {   // Historial con solo los discos de ese estilo
+        H.playlist = false; H.q = ''; H.filtro = 'estilo'; H.valor = es.getAttribute('data-estilo'); TAB = 'historial';
+        $('tabs').querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-tab') === 'historial'); });
+        render(); window.scrollTo(0, 0); return;
+      }
       var t = e.target.closest('[data-r]'); if (t) abrirRonda(t.getAttribute('data-r'));
     };
     var pintaNum = function (s) {
@@ -883,20 +896,26 @@
       h += ranking('Lobo solitario', 'Con qué frecuencia votó una canción que nadie más votó', rk.lobo, function (x) { return pct(x.solo); }, null, td.lobo);
       h += ranking('Racha', 'Más rondas seguidas votando sin faltar', rk.racha, function (x) { return x.racha + (x.rachaActual === x.racha ? ' <span class="chip done" style="font-size:9px;padding:2px 6px">sigue</span>' : ''); }, null, td.racha);
       h += '<span class="k sec-t">Afinidad</span>';
-      h += ranking('Almas gemelas', 'Parejas que más veces votaron la misma canción en las mismas rondas', s.almas, function (x) { return pct(x.pct); }, null, s.almasTodas, 'Mostrar las 50 primeras');
-      h += ranking('Polos opuestos', 'Parejas que menos veces votaron la misma canción en las mismas rondas', s.opuestos, function (x) { return pct(x.pct); }, null, s.opuestosTodos, 'Mostrar las 50 primeras');
+      // Afinidad (14-nov): arriba, las 5 parejas más fuertes sin repetir a nadie; detrás, una línea por persona
+      var apm = s.afinidadPorMiembro || [];
+      var porPersona = apm.length ? botonMas('Ver el de cada uno (' + apm.length + ')', apm.map(function (m) {
+        return '<div class="rk af"><span class="nm"><b>' + esc(m.nombre) + (m.pocos ? ' <span class="muted" style="font-size:12px;font-weight:400">(con pocos discos en común: ' + m.alma.juntos + ')</span>' : '') + '</b><span class="afl">Alma gemela: ' + esc(m.alma.con) + ' <i>' + pct(m.alma.pct) + '</i></span><span class="afl">Opuesto: ' + esc(m.opuesto.con) + ' <i>' + pct(m.opuesto.pct) + '</i></span></span></div>';
+      }).join('')) : '';
+      h += ranking('Almas gemelas', 'Las parejas que más veces votaron la misma canción. Cada persona sale una sola vez', s.almas, function (x) { return pct(x.pct); });
+      h += ranking('Polos opuestos', 'Las parejas que menos veces votaron la misma canción. Cada persona sale una sola vez', s.opuestos, function (x) { return pct(x.pct); });
+      if (porPersona) h += '<div class="rank"><div class="rk-h"><b>El alma gemela y el opuesto de cada uno</b><span class="muted">Con quién coincide más y con quién menos cada miembro</span></div>' + porPersona + '</div>';
       h += '<span class="k sec-t">Los que proponen</span>';
       h += ranking('El profeta', 'En sus propias propuestas, qué porcentaje de las veces ganó la canción que él mismo votó', pr.profeta, function (x) { return pct(x.profeta); }, null, ptd.profeta);
-      h += ranking('El que une', 'Qué tan de acuerdo estuvo el grupo con sus discos: más alto = los votos se juntaron en una sola canción', pr.une, function (x) { return pct(x.une); }, null, ptd.une);
+      h += ranking('El que une', 'Qué tan de acuerdo estuvo el grupo con sus discos: Más alto = los votos se juntaron en una sola canción', pr.une, function (x) { return pct(x.une); }, null, ptd.une);
       h += ranking('El explorador', 'Qué porcentaje de sus propuestas fue una banda que el grupo nunca había propuesto', pr.explorador, function (x) { return pct(x.explorador); }, null, ptd.explorador);
-      h += ranking('El arqueólogo', 'Año medio de los discos que propone: los más antiguos primero', pr.arqueologo, function (x) { return x.edad; }, null, ptd.arqueologo);
-      h += ranking('El moderno', 'Año medio de los discos que propone: los más recientes primero', pr.moderno, function (x) { return x.edad; }, null, ptd.moderno);
+      h += ranking('El arqueólogo', 'Año medio de los discos que propone: Los más antiguos primero', pr.arqueologo, function (x) { return x.edad; }, null, ptd.arqueologo);
+      h += ranking('El moderno', 'Año medio de los discos que propone: Los más recientes primero', pr.moderno, function (x) { return x.edad; }, null, ptd.moderno);
       h += '<span class="k sec-t">Récords</span>';
       h += rankingRondas('Las más unánimes', 'Propuestas donde más gente votó la misma canción (mínimo 8 votos)', rc.unanimes, rc.unanimesTodas, function (r) { return r.ganadoraVotos + ' de ' + r.votos; });
       h += rankingRondas('Las más divididas', 'Propuestas con más canciones distintas votadas (mínimo 8 votos)', rc.divididas, rc.divididasTodas, function (r) { return r.distintas + ' canciones'; });
       h += barrasMas('Las bandas más propuestas', 'Cuántos de sus discos se han propuesto en el grupo', rc.topBandas, 10);
       h += '<div class="rank"><div class="rk-h"><b>Por década</b><span class="muted">Cuántos discos propuestos salieron en cada década</span></div>' + barrasSimple(s.decadas.map(function (d) { return [d[0].replace(/^19|^20/, "'").replace('s', 's'), d[1]]; })) + '</div>';
-      if (s.estilos && s.estilos.length) h += barrasMas('Por estilo', 'Según Discogs; un disco puede tener varios estilos', s.estilos, 10);
+      if (s.estilos && s.estilos.length) h += barrasMas('Por estilo', 'Toca un estilo para ver sus discos. Según Discogs; un disco puede tener varios estilos', s.estilos, 10, null, 'data-estilo');
       if (s.paises && s.paises.length) h += barrasMas('Por país', 'País de origen de la banda de cada disco propuesto', s.paises, 10);
       h += '<p class="foot">Las rondas del historial cuentan solo mientras cada uno estaba en el grupo.</p>';
       v.innerHTML = h;
@@ -938,7 +957,7 @@
         '</div></div>';
       // 6B · Tu turno
       var turno;
-      if (me.libre) turno = 'No entras en la rotación: propones por tu cumpleaños y puedes pedir un turno extra sin mover el de nadie.';
+      if (me.libre) turno = 'No entras en la rotación: Propones por tu cumpleaños y puedes pedir un turno extra sin mover el de nadie.';
       else if (me.turnosParaMi === 0) turno = '<b>Te toca proponer ahora.</b>';
       else if (me.turnosParaMi != null) turno = 'Te toca proponer en <b>' + me.turnosParaMi + (me.turnosParaMi === 1 ? ' turno' : ' turnos') + '</b> · ahora va ' + esc(me.siguiente) + '.';
       var cum = me.cumpleDia ? 'Tu cumpleaños: <b>' + esc(me.cumpleDia) + ' de ' + MES[Number(me.cumpleMes)] + '</b>.' : '';
@@ -966,7 +985,7 @@
       h += '<details class="note"><summary><b>Ponla en la pantalla de inicio</b></summary><div style="margin-top:8px">' +
         'Abre primero tu enlace personal (el de WhatsApp) y, desde esa misma página:<br><b>iPhone (Safari):</b> toca el botón de compartir (el cuadrado con la flecha) y elige «Añadir a pantalla de inicio».<br>' +
         '<b>Android (Chrome):</b> toca los tres puntos de arriba a la derecha y elige «Añadir a pantalla de inicio» o «Instalar app».</div></details>' +
-        '<div class="note">Este es tu enlace personal: no lo compartas. Si lo pierdes, pídele uno nuevo a Chiquito.</div>' +
+        '<div class="note">Este es tu enlace personal: No lo compartas. Si lo pierdes, pídele uno nuevo a Chiquito.</div>' +
         '<p class="foot">' + esc(S.grupo || 'The Skull') + ' · v' + esc(S.version || '1.1') + '</p>';
       v.innerHTML = h;
     }).catch(function (e) { v.innerHTML = '<div class="hero"></div><div class="err">' + esc(errMsg(e)) + '</div>'; });
@@ -1033,16 +1052,13 @@
   // Hoy: votaciones abiertas, empates, llamadas de atención
   function panelHoy(box) {
     var h = '';
-    (S.admin.alertas || []).forEach(function (x) {
-      h += '<div class="warn"><span><b>' + esc(x.miembro) + '</b> lleva ' + x.rondas + ' rondas sin votar.</span><button class="btn small ghost" data-llamada="' + esc(x.miembro) + '">Mensaje de llamada de atención</button></div>';
-    });
     S.desempates.forEach(function (r) {
       h += '<div class="warn"><span><b>Empate en la #' + esc(r.numero) + ' ' + esc(r.banda) + '.</b> ' + esc(r.desempate) + '</span><button class="btn small" data-r="' + esc(r.id) + '">Elegir la ganadora</button></div>';
     });
     if (!S.abiertas.length) h += '<div class="note">No hay votaciones abiertas.</div>';
     S.abiertas.filter(function (r) { return r.estado !== 'desempate'; }).forEach(function (r) {
       var lista = r.todosVotaron ? '<span class="chip done">Todos votaron · ¿cerrar?</span>' : (r.listaParaCerrar ? '<span class="chip gold">Lista para cerrar</span>' : '');
-      var lim = r.fecha_limite ? 'Se cierra sola el ' + fCorta(r.fecha_limite) + (r.prorroga ? ' (con prórroga)' : '') : (r.estado === 'whatsapp' ? (r.canciones >= 2 ? 'Se vota en el chat y en la app · ' : 'Se vota en WhatsApp · ') + r.diasAbierta + ' días abierta' : '');
+      var lim = r.fecha_limite ? 'Cierre previsto: ' + fCorta(r.fecha_limite) + (r.prorroga ? ' (con prórroga)' : '') : (r.estado === 'whatsapp' ? (r.canciones >= 2 ? 'Se vota en el chat y en la app · ' : 'Se vota en WhatsApp · ') + r.diasAbierta + ' días abierta' : '');
       h += '<div class="pcard"><div class="pc-h"><span class="num">#' + esc(r.numero) + '</span> <b>' + esc(r.banda) + '</b> · ' + esc(r.disco) + ' ' + lista + '</div>' +
         '<div class="muted" style="font-size:13px">' + r.votaron + ' de ' + r.total + ' votaron' + (lim ? ' · ' + esc(lim) : '') + '</div>' +
         (r.faltan && r.faltan.length ? '<div class="faltan">Faltan: <b>' + esc(r.faltan.join(', ')) + '</b></div>' : '') +
@@ -1244,7 +1260,7 @@
         return '<label class="f">' + t + '<select id="re_' + k + '" class="sel">' + ops.map(function (o) { var s = !elegido && nn(o) === nn(cur); if (s) elegido = true; return '<option value="' + esc(o) + '"' + (s ? ' selected' : '') + '>' + esc(o || '—') + '</option>'; }).join('') + '</select></label>'; };
       var cs = r.canciones || [];
       var h = '<div class="top"><button class="back" id="back">‹ Volver al Panel</button><span class="k" style="margin-left:auto">Editar ' + esc('#' + r.numero) + '</span></div>' +
-        '<h2>#' + esc(r.numero) + ' · ' + esc(r.banda) + '</h2>' + (r.historica ? '<div class="note">Ronda del historial: los cambios quedan en el registro con tu nombre.</div>' : '') +
+        '<h2>#' + esc(r.numero) + ' · ' + esc(r.banda) + '</h2>' + (r.historica ? '<div class="note">Ronda del historial: Los cambios quedan en el registro con tu nombre.</div>' : '') +
         campo('banda', 'Banda') + campo('disco', 'Disco') + '<div class="row">' + campo('anio', 'Año', 'numeric') + campo('pais', 'País') + '</div>' +
         sel('ganadora', 'Ganadora', [''].concat(cs.map(function (c) { return c.titulo; }))) +
         sel('proponente', 'Propuso', [''].concat(S.miembros).concat(['Decisión colectiva'])) + sel('tipo', 'Tipo', r.tipos || ['normal', 'cumpleaños', 'póstuma']) + campo('homenaje', 'Homenaje a (póstumas)') +
