@@ -308,3 +308,21 @@ select.sel:disabled,input:disabled{opacity:.55}
 button.sb.toca{background:none;border:0;color:inherit;font:inherit;width:100%;text-align:left;cursor:pointer;padding-left:0;padding-right:0}
 button.sb.toca>span:first-child{text-decoration:underline;text-underline-offset:3px}
 .filtro-est{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+
+/* Admins: registrar el voto de quien votó solo en el chat (14-nov) */
+button.falta-b{background:none;border:1px solid var(--blood);color:var(--bone);border-radius:999px;padding:4px 10px;font:inherit;font-size:13px;cursor:pointer}
+.falta-f{background:var(--slab2);border:1px solid var(--line);border-radius:12px;padding:12px;margin:6px 0 10px;display:flex;flex-direction:column;gap:8px}
+.falta-f select{width:100%}
+
+button.falta-b.v{border-color:var(--line);text-align:right}
+button.falta-b.v.w{color:var(--gold);border-color:var(--gold)}
+.adm-ed{width:100%;margin-top:8px;border-style:dashed}
+/* Inicio: playlist de The Skull (14-nov) */
+.plb{border:1px solid var(--blood);border-radius:14px;padding:14px;background:linear-gradient(#1f1315,#17151a);display:flex;flex-direction:column;gap:6px}
+.plb-t{font-family:var(--f-head);font-size:24px;letter-spacing:.5px;text-transform:uppercase;color:var(--bone)}
+.plb-s{color:var(--dust);font-size:14px}
+.plb .row{margin-top:6px}
+.plb .btn{flex:1;text-align:center;text-decoration:none}
+
+.plb .btn{display:flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;min-width:0}
+.plb .btn .ic{font-size:15px;line-height:1}

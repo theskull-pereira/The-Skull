@@ -245,6 +245,9 @@
       h += '<button class="note" data-r="' + esc(w.id) + '" style="text-align:left;cursor:pointer;border-style:solid">Lo último que se cerró: <span class="num">#' + esc(w.numero) + '</span> ' + esc(w.banda) +
         ' → <b style="color:var(--gold)">' + esc(w.ganadora) + '</b></button>';
     }
+    if (S.playlists && (S.playlists.spotify || S.playlists.youtube)) h += '<div class="plb"><div class="plb-t">🎧 ¡Escucha la playlist!</div><div class="plb-s">Todas las ganadoras de The Skull, en una sola lista</div><div class="row">' +
+      (S.playlists.spotify ? '<a class="btn" target="_blank" rel="noopener" href="' + esc(S.playlists.spotify) + '"><span class="ic">♫</span>Spotify</a>' : '') +
+      (S.playlists.youtube ? '<a class="btn" target="_blank" rel="noopener" href="' + esc(S.playlists.youtube) + '"><span class="ic">▶</span>YouTube</a>' : '') + '</div></div>';
     h += '<div class="cuentos-t"><span>Cuentos del Cuaderno</span></div><div id="dc"><div class="cuaderno"><span class="muted">Abriendo el cuaderno…</span></div></div>';   // 1E
     var conFotos = S.abiertas.some(function (r) { return r.portada; }) || (S.ultima && S.ultima.portada);
     if (conFotos) h += '<a class="dgs" style="align-self:center" target="_blank" rel="noopener" href="https://www.discogs.com">Portadas: Data provided by Discogs.</a>';   // condición de Discogs
@@ -325,7 +328,11 @@
     var h = '<details class="note"' + (abierta ? ' open' : '') + '><summary><b>Quién votó</b> · ' + votaron + ' de ' + lista.length + '</summary><div class="list who-l" style="margin-top:6px">';
     lista.forEach(function (x) {
       var sg;
-      if (x.estado === 'voto') sg = '<span class="sg' + (r.ganadora && igual(x.cancion, r.ganadora) ? ' w' : '') + '">' + esc(x.cancion) + '</span>';
+      if (r.esAdmin) {   // 14-nov: los admins pueden poner, cambiar o quitar el voto de cualquiera, también en propuestas cerradas
+        var etq = x.estado === 'voto' ? esc(x.cancion) + ' ✎' : (x.estado === 'abstencion' ? 'Abstención · Cambiar ›' : (abierta ? 'Falta · Añadir su voto ›' : 'Abstención · Cambiar ›'));
+        sg = '<button type="button" class="sg falta-b' + (x.estado === 'voto' ? ' v' + (r.ganadora && igual(x.cancion, r.ganadora) ? ' w' : '') : ' f') + '" data-falta="' + esc(x.miembro) + '" data-tiene="' + (x.estado === 'voto' || x.estado === 'abstencion' ? '1' : '') + '" data-voto="' + esc(x.estado === 'voto' ? x.cancion : '') + '">' + etq + '</button>';
+      }
+      else if (x.estado === 'voto') sg = '<span class="sg' + (r.ganadora && igual(x.cancion, r.ganadora) ? ' w' : '') + '">' + esc(x.cancion) + '</span>';
       else if (x.estado === 'abstencion') sg = '<span class="sg a">Abstención</span>';
       else sg = abierta ? '<span class="sg f">Falta</span>' : '<span class="sg a">Abstención</span>';
       h += '<div class="li"><span class="nm">' + esc(x.miembro) + (x.doble ? ' <span class="chip x2" title="Voto doble del proponente">×2</span>' : '') +
@@ -333,6 +340,36 @@
     });
     return h + '</div></details>';
   }
+  document.addEventListener('click', function (e) {
+    var ed = e.target.closest && e.target.closest('#admEd');
+    if (ed && CUR && CUR.esAdmin) editarRonda(CUR.id);
+  });
+  /* Admins: tocar «Falta» abre debajo la lista de canciones para registrar el voto que esa persona dio en el chat. */
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-falta]');
+    if (b && CUR && CUR.esAdmin) {
+      var fila = b.closest('.li'), nombre = b.getAttribute('data-falta'), ya = fila.nextElementSibling;
+      if (ya && ya.classList.contains('falta-f')) { ya.remove(); return; }
+      document.querySelectorAll('.falta-f').forEach(function (x) { x.remove(); });
+      var actual = b.getAttribute('data-voto') || '', tiene = !!b.getAttribute('data-tiene');
+      var ops = (CUR.canciones || []).map(function (s) { return '<option' + (s.titulo === actual ? ' selected' : '') + '>' + esc(s.titulo) + '</option>'; }).join('');
+      fila.insertAdjacentHTML('afterend', '<div class="falta-f"><label>Voto de <b>' + esc(nombre) + '</b>' + (tiene ? '' : ' (dado en el chat)') + '</label>' +
+        '<select id="faltaSel"><option value="">Elige la canción…</option>' + ops + '<option value="' + esc(ABST) + '">Se abstiene</option>' + (tiene ? '<option value="__quitar">Quitar su voto (dejarlo sin votar)</option>' : '') + '</select>' +
+        '<div class="row"><button type="button" class="btn small" data-faltaok="' + esc(nombre) + '">Guardar voto</button><button type="button" class="btn small ghost" data-faltano="1">Cancelar</button></div></div>');
+      return;
+    }
+    if (e.target.closest && e.target.closest('[data-faltano]')) { document.querySelectorAll('.falta-f').forEach(function (x) { x.remove(); }); return; }
+    var ok = e.target.closest && e.target.closest('[data-faltaok]');
+    if (ok && CUR) {
+      var can = ($('faltaSel') || {}).value || '', quienV = ok.getAttribute('data-faltaok'), rid = CUR.id;
+      if (!can) { toast('Elige la canción'); return; }
+      ok.disabled = true; ok.textContent = 'Guardando…';
+      api('api_voteFix', rid, quienV, can === '__quitar' ? '' : can).then(function (x) {
+        toast(can === '__quitar' ? 'Voto de ' + quienV + ' quitado' : 'Voto de ' + quienV + ' guardado'); if (x && x.aviso) toast(x.aviso);
+        return api('api_round', rid).then(function (r) { RMEM[rid] = r; if (CUR && CUR.id === rid) { CUR = r; dibujarRonda(); } cargar(true); });
+      }).catch(function (err) { toast(errMsg(err)); ok.disabled = false; ok.textContent = 'Guardar voto'; });
+    }
+  });
   /** Orden del disco: A1, A2, B1… o 1, 2, 3…; las canciones sin posición (votadas que no están en la edición) van al final. */
   function ordenDisco(cs) {
     var clave = function (p) {
@@ -365,6 +402,7 @@
     h += '<div class="row">' + (r.spotify ? '<a class="btn ghost" target="_blank" rel="noopener" href="' + esc(r.spotify) + '">Spotify ›</a>' : '<a class="btn ghost" target="_blank" rel="noopener" href="https://open.spotify.com/search/' + q + '">Spotify ›</a>') +
       '<a class="btn ghost" target="_blank" rel="noopener" href="' + (r.youtube ? esc(r.youtube) : 'https://music.youtube.com/search?q=' + q) + '">YouTube Music ›</a>' +   // siempre está: directo al disco si hay enlace, y si no, la búsqueda (como antes)
       '<a class="btn ghost" target="_blank" rel="noopener" href="https://www.metal-archives.com/search?searchString=' + encodeURIComponent(r.banda) + '&type=band_name">Metal Archives ›</a></div>';
+    if (r.esAdmin) h += '<button type="button" class="btn ghost adm-ed" id="admEd">✏️ Editar o cancelar esta propuesta (admins)</button>';
     if (r.presentacion) h += '<details class="note"><summary><b>Presentación de ' + esc(r.proponente) + '</b></summary><div class="pres" style="margin-top:8px">' + esc(r.presentacion) + '</div></details>';
     if (r.edicion) h += '<div class="note">Edición: ' + esc(r.edicion) + '</div>';
 
@@ -817,9 +855,6 @@
     api('api_playlist', { letra: H.letra || 'A' }).then(function (p) {
       H.letra = p.letra || 'A';
       var h = '<div class="letters">' + p.letras.map(function (l) { return '<button class="fchip sm' + (l === H.letra ? ' on' : '') + '" data-l="' + esc(l) + '">' + esc(l) + '</button>'; }).join('') + '</div>' +
-        ((S.playlists && (S.playlists.spotify || S.playlists.youtube)) ? '<div class="note"><b>Escucha la playlist de The Skull</b><div class="row" style="margin-top:8px">' +
-          (S.playlists.spotify ? '<a class="btn ghost" target="_blank" rel="noopener" href="' + esc(S.playlists.spotify) + '">Spotify ›</a>' : '') +
-          (S.playlists.youtube ? '<a class="btn ghost" target="_blank" rel="noopener" href="' + esc(S.playlists.youtube) + '">YouTube ›</a>' : '') + '</div></div>' : '') +
         '<div class="row"><button class="btn ghost" id="pcopy">Copiar la ' + esc(H.letra) + ' para WhatsApp</button></div>' +
         '<div class="plist">' + p.bandas.map(function (b) {
           return '<div class="pb"><b>' + esc(b.banda) + '</b>' + b.discos.map(function (d) {
@@ -1064,7 +1099,7 @@
         (r.faltan && r.faltan.length ? '<div class="faltan">Faltan: <b>' + esc(r.faltan.join(', ')) + '</b></div>' : '') +
         '<div class="row" style="margin-top:8px">' +
         (r.estado === 'whatsapp' ? (r.canciones >= 2 ? '<button class="btn small" data-cerrar="' + esc(r.id) + '">Cerrar votación</button>' : '') + '<button class="btn small' + (r.canciones >= 2 ? ' ghost' : '') + '" data-wa="' + esc(r.id) + '">Registrar resultado del chat</button>'
-          : '<button class="btn small" data-cerrar="' + esc(r.id) + '">Cerrar votación</button>' + (r.prorroga ? '' : '<button class="btn small ghost" data-prorroga="' + esc(r.id) + '">+3 días</button>')) +
+          : '<button class="btn small" data-cerrar="' + esc(r.id) + '">Cerrar votación</button>') +
         '<button class="btn small ghost" data-recordar="' + esc(r.id) + '">Recordatorio</button><button class="btn small ghost" data-r="' + esc(r.id) + '">Ver</button></div>' +
         '<div class="wa-box" id="wa_' + esc(r.id) + '" hidden><label class="f">Pega aquí el resultado como lo escribes en el chat (una línea por canción: «Canción   número»)<textarea id="wat_' + esc(r.id) + '" style="min-height:150px"></textarea></label><button class="btn small" data-wago="' + esc(r.id) + '">Guardar y cerrar</button></div></div>';
     });
