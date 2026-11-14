@@ -392,3 +392,9 @@ nav.tabs button.on .ico{color:var(--blood)}
 .afm-g .afp{font-family:var(--f-mono);font-size:13px;color:var(--gold);white-space:nowrap;text-align:right}
 /* El nombre de quien entra, a la izquierda (Inicio y Yo) */
 .hero .who{right:auto;left:12px}
+
+/* Historial: cuadro de búsqueda con botón para borrar (14-nov) */
+.hsf{display:flex;gap:8px;align-items:center}
+.hsf input{flex:1;min-width:0}
+.hsf .btn{white-space:nowrap}
+.hsf .btn[hidden]{display:none}

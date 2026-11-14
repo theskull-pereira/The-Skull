@@ -806,7 +806,8 @@
         '<select id="fmie" class="fsel"><option value="">Miembro</option>' + f.miembros.map(function (m) { return '<option' + (H.filtro === 'miembro' && H.valor === m.nombre ? ' selected' : '') + '>' + esc(m.nombre) + '</option>'; }).join('') + '</select></div>';
     }
     v.innerHTML = '<div class="pagehead"><h2>Historial</h2>' + (H.total && !H.playlist ? '<span class="k">' + H.total + ' rondas</span>' : '') + '</div>' +
-      (H.playlist ? '' : '<form id="hs"><input type="search" id="hq" placeholder="Buscar: #627, banda, disco, canción, miembro, año" value="' + esc(H.q) + '"></form>') +
+      (H.playlist ? '' : '<form id="hs" class="hsf"><input type="search" id="hq" placeholder="Buscar: #627, banda, disco, canción, miembro, año" value="' + esc(H.q) + '" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">' +
+        '<button type="button" class="btn small ghost" id="hqx"' + (H.q ? '' : ' hidden') + '>✕ Borrar</button></form>') +
       '<div class="chips">' + chips + '</div>' + filtros +
       (H.filtro === 'estilo' && !H.playlist ? '<div class="note filtro-est">Estilo: <b>' + esc(H.valor) + '</b><button class="btn small ghost" id="festx">Quitar filtro ✕</button><button class="btn small ghost" id="festn">‹ Volver a Números</button></div>' : '') + '<div id="hl"><div class="spin"></div></div>';
     v.querySelectorAll('[data-v]').forEach(function (b) { b.onclick = function () { var x = b.getAttribute('data-v'); if (x === 'playlist') { H.playlist = true; } else { H.playlist = false; H.vista = x; } cargarHist(); }; });
@@ -815,17 +816,35 @@
     var fm = $('fmie'); if (fm) fm.onchange = function () { H.filtro = fm.value ? 'miembro' : ''; H.valor = fm.value; cargarHist(); };
     var fx = $('festx'); if (fx) fx.onclick = function () { H.filtro = ''; H.valor = ''; cargarHist(); };
     var fn = $('festn'); if (fn) fn.onclick = function () { H.filtro = ''; H.valor = ''; TAB = 'numeros'; $('tabs').querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-tab') === 'numeros'); }); render(); };
-    var hs = $('hs'); if (hs) hs.onsubmit = function (e) { e.preventDefault(); H.q = $('hq').value.trim(); $('hq').blur(); cargarHist(); };
+    // Búsqueda (14-nov): busca sola mientras se escribe, y al borrar el texto vuelve la lista completa.
+    // Antes solo cambiaba al pulsar «Buscar» en el teclado: si se borraba el texto, la búsqueda vieja seguía puesta.
+    var hs = $('hs'), hq = $('hq'), hqx = $('hqx');
+    var buscaYa = function (v) { v = String(v || '').trim(); if (hqx) hqx.hidden = !v; if (v === H.q) return; H.q = v; cargarHist(false, true); };
+    if (hs) hs.onsubmit = function (e) { e.preventDefault(); clearTimeout(vistaHistorial.t); buscaYa(hq.value); hq.blur(); };
+    if (hq) hq.oninput = hq.onsearch = function () {
+      clearTimeout(vistaHistorial.t); var v = hq.value.trim();
+      if (hqx) hqx.hidden = !v;
+      if (!v) { buscaYa(''); return; }                       // texto borrado: lista completa al instante
+      if (v.length >= 2) vistaHistorial.t = setTimeout(function () { buscaYa(hq.value); }, 500);
+    };
+    if (hqx) hqx.onclick = function () { clearTimeout(vistaHistorial.t); hq.value = ''; buscaYa(''); hq.focus(); };
     v.onclick = function (e) { var t = e.target.closest('[data-r]'); if (t) abrirRonda(t.getAttribute('data-r')); };
   }
-  function cargarHist(mas) {
-    if (!mas) { H.items = []; vistaHistorial(); }
+  var HSEQ = 0;   // cada pedido lleva su número: una respuesta vieja que llega tarde no pisa a la nueva
+  function cargarHist(mas, soloLista) {
+    if (!mas) {
+      H.items = [];
+      if (soloLista && $('hl')) $('hl').innerHTML = '<div class="spin"></div>';   // se cambia solo la lista: el cuadro de búsqueda no se toca (no pierde el teclado)
+      else vistaHistorial();
+    }
     if (H.playlist) return cargarPlaylist();
+    var seq = ++HSEQ, q0 = H.q;
     api('api_historial', { vista: H.vista, filtro: H.filtro, valor: H.valor, q: H.q, desde: H.items.length, n: 40 }).then(function (r) {
-      if (r.filtros) { var redibujar = !H.filtros; H.filtros = r.filtros; if (redibujar) { H.total = r.total; vistaHistorial(); } }
+      if (seq !== HSEQ || q0 !== H.q) return;
+      if (r.filtros) { var redibujar = !H.filtros; H.filtros = r.filtros; if (redibujar && document.activeElement !== $('hq')) { H.total = r.total; vistaHistorial(); } }
       H.total = r.total; var antes = H.items.length; H.items = H.items.concat(r.items);
       pintarHist(antes);
-    }).catch(function (e) { $('hl').innerHTML = '<div class="err">' + esc(errMsg(e)) + '</div>'; });
+    }).catch(function (e) { if (seq !== HSEQ) return; var b = $('hl'); if (b) b.innerHTML = '<div class="err">' + esc(errMsg(e)) + '</div>'; });
   }
   function filaHist(x) {
     var h = '';
