@@ -944,7 +944,9 @@
       // Afinidad (14-nov): arriba, las 5 parejas más fuertes sin repetir a nadie; detrás, una línea por persona
       var apm = s.afinidadPorMiembro || [];
       var porPersona = apm.length ? botonMas('Ver el de cada uno (' + apm.length + ')', apm.map(function (m) {
-        return '<div class="rk af"><span class="nm"><b>' + esc(m.nombre) + (m.pocos ? ' <span class="muted" style="font-size:12px;font-weight:400">(con pocos discos en común: ' + m.alma.juntos + ')</span>' : '') + '</b><span class="afl">Alma gemela: ' + esc(m.alma.con) + ' <i>' + pct(m.alma.pct) + '</i></span><span class="afl">Opuesto: ' + esc(m.opuesto.con) + ' <i>' + pct(m.opuesto.pct) + '</i></span></span></div>';
+        var lin = function (et, x) { return '<span class="afe">' + et + '</span><span class="afn">' + esc(x.con) + '</span><span class="afp">' + pct(x.pct) + '</span>'; };
+        return '<div class="afm"><div class="afm-n">' + esc(m.nombre) + (m.pocos ? ' <span class="muted">(pocos discos en común: ' + m.alma.juntos + ')</span>' : '') + '</div>' +
+          '<div class="afm-g">' + lin('💀 Alma gemela', m.alma) + lin('⚡ Opuesto', m.opuesto) + '</div></div>';
       }).join('')) : '';
       h += ranking('Almas gemelas', 'Las parejas que más veces votaron la misma canción. Cada persona sale una sola vez', s.almas, function (x) { return pct(x.pct); });
       h += ranking('Polos opuestos', 'Las parejas que menos veces votaron la misma canción. Cada persona sale una sola vez', s.opuestos, function (x) { return pct(x.pct); });

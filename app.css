@@ -381,3 +381,14 @@ nav.tabs button .ico{width:22px;height:22px;margin:0}
 nav.tabs button i{order:-1;width:26px;margin:0 auto 3px}
 nav.tabs button.on{color:var(--chrome-hi)}
 nav.tabs button.on .ico{color:var(--blood)}
+
+/* Afinidad de cada uno (14-nov): nombre arriba y dos líneas alineadas: etiqueta · con quién · porcentaje */
+.afm{padding:10px 0;border-top:1px solid var(--line)}
+.afm-n{font-weight:600;font-size:16px;color:var(--bone);margin-bottom:4px}
+.afm-n .muted{font-weight:400;font-size:12px}
+.afm-g{display:grid;grid-template-columns:auto 1fr auto;column-gap:10px;row-gap:3px;align-items:baseline;font-size:14px}
+.afm-g .afe{color:var(--dust);white-space:nowrap}
+.afm-g .afn{color:var(--bone)}
+.afm-g .afp{font-family:var(--f-mono);font-size:13px;color:var(--gold);white-space:nowrap;text-align:right}
+/* El nombre de quien entra, a la izquierda (Inicio y Yo) */
+.hero .who{right:auto;left:12px}
