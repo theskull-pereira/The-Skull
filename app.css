@@ -398,3 +398,7 @@ nav.tabs button.on .ico{color:var(--blood)}
 .hsf input{flex:1;min-width:0}
 .hsf .btn{white-space:nowrap}
 .hsf .btn[hidden]{display:none}
+
+/* Título de Cuentos del Cuaderno: imagen hecha por Milena (14-nov). El negro del fondo se funde con el de la app. */
+.cuentos-t{margin:14px -8px 0}
+.cuentos-t img{display:block;width:100%;height:auto;mix-blend-mode:lighten}

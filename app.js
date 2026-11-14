@@ -278,7 +278,7 @@
     if (S.playlists && (S.playlists.spotify || S.playlists.youtube)) h += '<div class="plb"><div class="plb-t">🎧 ¡Escucha la playlist!</div><div class="plb-s">Todas las ganadoras de The Skull, en una sola lista</div><div class="row">' +
       (S.playlists.spotify ? '<a class="btn" target="_blank" rel="noopener" href="' + esc(S.playlists.spotify) + '"><span class="ic">♫</span>Spotify</a>' : '') +
       (S.playlists.youtube ? '<a class="btn" target="_blank" rel="noopener" href="' + esc(S.playlists.youtube) + '"><span class="ic">▶</span>YouTube</a>' : '') + '</div></div>';
-    h += '<div class="cuentos-t"><span>Cuentos del Cuaderno</span></div><div id="dc"><div class="cuaderno"><span class="muted">Abriendo el cuaderno…</span></div></div>';   // 1E
+    h += '<div class="cuentos-t"><img src="img/cuentos_titulo.jpg" alt="Cuentos del Cuaderno" onerror="this.outerHTML=\'<span>Cuentos del Cuaderno</span>\'"></div><div id="dc"><div class="cuaderno"><span class="muted">Abriendo el cuaderno…</span></div></div>';   // 1E
     var conFotos = S.abiertas.some(function (r) { return r.portada; }) || (S.ultima && S.ultima.portada);
     if (conFotos) h += '<a class="dgs" style="align-self:center" target="_blank" rel="noopener" href="https://www.discogs.com">Portadas: Data provided by Discogs.</a>';   // condición de Discogs
     h += '<p class="foot">' + esc(S.grupo || 'The Skull') + ' · v' + esc(S.version || '1.1') + (VER ? ' · ' + VER : '') + '<br>Imagen original: Milena</p>';
