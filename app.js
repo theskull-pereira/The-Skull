@@ -8,6 +8,7 @@
 
   /* ---------- utilidades ---------- */
   function $(id) { return document.getElementById(id); }
+  function cap1(x) { x = String(x || ''); return x.charAt(0).toUpperCase() + x.slice(1); }   // 17-nov: etiquetas sueltas con inicial mayúscula
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function toast(t) { var e = $('toast'); e.textContent = t; e.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(function () { e.hidden = true; }, 2600); }
   function errMsg(e) { return (e && e.message ? e.message : String(e)).replace(/^(Exception|Error): /, ''); }
@@ -303,7 +304,7 @@
     var b0 = $('dcOtra'); if (b0) { b0.disabled = true; b0.textContent = '🩸 Desenterrando…'; }
     api('api_delCuaderno').then(function (r) {
       var box = $('dc'); if (!box || !r) return;
-      box.innerHTML = '<div class="cuaderno" data-r="' + esc(r.id) + '"><div class="sangre"></div>' +
+      box.innerHTML = '<div class="cuaderno" data-r="' + esc(r.id) + '">' +
         (r.portada ? '<img class="cimg" alt="" src="' + esc(r.portada) + '" onerror="this.remove()">' : '') +
         '<div class="k">#' + esc(r.numero) + (r.rotacion ? ' · Ronda ' + esc(romano(r.rotacion)) : '') + '</div>' +
         '<div class="hand">' + esc(r.banda) + ' – ' + esc(r.disco) + (r.anio ? ' <span class="muted" style="font-family:var(--f-body);font-size:14px">(' + esc(r.anio) + ')</span>' : '') + '</div>' +
@@ -354,18 +355,19 @@
     var lista = r.lista || [];
     if (!lista.length) return '';
     var abierta = r.estado === 'abierta' || r.estado === 'whatsapp';
-    var votaron = lista.filter(function (x) { return x.estado === 'voto'; }).length;
-    var h = '<details class="note"' + (abierta ? ' open' : '') + '><summary><b>Quién votó</b> · ' + votaron + ' de ' + lista.length + '</summary><div class="list who-l" style="margin-top:6px">';
+    var votaron = lista.filter(function (x) { return x.estado === 'voto'; }).length, cuentan = lista.filter(function (x) { return x.estado !== 'sinvoto'; }).length;   // Pablo y Pecoso salen, pero no cuentan en «x de y»
+    var h = '<details class="note"' + (abierta ? ' open' : '') + '><summary><b>Quién votó</b> · ' + votaron + ' de ' + cuentan + '</summary><div class="list who-l" style="margin-top:6px">';
     lista.forEach(function (x) {
       var sg;
       if (r.esAdmin) {   // 14-nov: los admins pueden poner, cambiar o quitar el voto de cualquiera, también en propuestas cerradas
-        var etq = x.estado === 'voto' ? esc(x.cancion) + ' ✎' : (x.estado === 'abstencion' ? 'Abstención · Cambiar ›' : (abierta ? 'Falta · Añadir su voto ›' : 'Abstención · Cambiar ›'));
+        var etq = x.estado === 'voto' ? esc(x.cancion) + ' ✎' : (x.estado === 'sinvoto' ? 'Sin voto · Añadir su voto ›' : x.estado === 'abstencion' ? 'Abstención · Cambiar ›' : (abierta ? 'Falta · Añadir su voto ›' : 'Abstención · Cambiar ›'));
         sg = '<button type="button" class="sg falta-b' + (x.estado === 'voto' ? ' v' + (r.ganadora && igual(x.cancion, r.ganadora) ? ' w' : '') : ' f') + '" data-falta="' + esc(x.miembro) + '" data-tiene="' + (x.estado === 'voto' || x.estado === 'abstencion' ? '1' : '') + '" data-voto="' + esc(x.estado === 'voto' ? x.cancion : '') + '">' + etq + '</button>';
       }
       else if (x.estado === 'voto') sg = '<span class="sg' + (r.ganadora && igual(x.cancion, r.ganadora) ? ' w' : '') + '">' + esc(x.cancion) + '</span>';
+      else if (x.estado === 'sinvoto') sg = '<span class="sg a">Sin voto</span>';
       else if (x.estado === 'abstencion') sg = '<span class="sg a">Abstención</span>';
       else sg = abierta ? '<span class="sg f">Falta</span>' : '<span class="sg a">Abstención</span>';
-      h += '<div class="li"><span class="nm">' + esc(x.miembro) + (x.doble ? ' <span class="chip x2" title="Voto doble del proponente">×2</span>' : '') +
+      h += '<div class="li"><span class="nm">' + esc(x.miembro) +
         (x.tardio ? ' <span class="chip grey">tardío</span>' : '') + '</span>' + sg + (x.comentario ? '<span class="cm">«' + esc(x.comentario) + '»</span>' : '') + '</div>';
     });
     return h + '</div></details>';
@@ -739,7 +741,9 @@
     }).join('') + '</div>';
     if (e.fuente === 'Discogs') h += '<a class="dgs" target="_blank" rel="noopener" href="' + esc((e.enlaces && e.enlaces.discogs) || 'https://www.discogs.com') + '">Data provided by Discogs.</a>';
     h += '<label class="f">Presentación (opcional)<textarea id="pres" placeholder="Cuéntales al grupo por qué este disco">' + esc(P.pres || '') + '</textarea></label>' +
-      '<label class="f">Enlace de Spotify o YouTube (opcional)<input type="text" id="lnk" placeholder="Pega aquí el enlace" value="' + esc(P.lnk || '') + '"></label>' +
+      '<label class="f">Enlace del álbum en Spotify (opcional)<input type="text" id="lnkS" placeholder="Pega aquí el enlace de Spotify" value="' + esc(P.lnkS || '') + '" autocapitalize="off" autocomplete="off"></label>' +
+      '<label class="f">Enlace del álbum en YouTube Music (opcional)<input type="text" id="lnkY" placeholder="Pega aquí el enlace de YouTube Music" value="' + esc(P.lnkY || '') + '" autocapitalize="off" autocomplete="off"></label>' +
+      '<span class="muted" style="font-size:12.5px">Si los dejas vacíos, los botones de la propuesta abren la búsqueda del disco (YouTube Music lo busca solo cuando puede).</span>' +
       quePasa() + '<button class="btn" id="go">Proponer «' + esc(e.disco) + '»</button>';
     abrirHoja(h);
     galWire();
@@ -752,17 +756,26 @@
     };
     $('go').onclick = function () {
       var bgo = this;
+      guardarTextos(); if (!leerEnlaces()) return;   // enlaces mal pegados: se avisa antes del «¿Seguro?»
       if (!bgo.getAttribute('data-ok')) { bgo.setAttribute('data-txt0', bgo.textContent); confirmar(bgo, function () {}); return; }   // primer toque: «¿Seguro? Toca otra vez»
       bgo.removeAttribute('data-ok'); bgo.classList.remove('alerta');
       guardarTextos();
-      var l = P.lnk || '';
+      var le = leerEnlaces(); if (!le) return;
       enviar({ banda: e.banda, disco: e.disco, anio: e.anio, pais: P.artista && P.artista.pais, pais_banda: P.artista && P.artista.pais,
         canciones: e.canciones, discogs_master: e.discogs_master || '', discogs_release: e.discogs_release || '', mbid_grupo: x.mbid || '',
         edicion: e.descripcion || '', sello: e.sello || '', avisos: (e.avisos || []).concat(x.tributo ? ['¿Tributo? (lo marcó Discogs)'] : []),
-        spotify: /spotify/.test(l) ? l : '', youtube: /youtu/.test(l) ? l : '' }, $('go'));
+        spotify: le.spotify, youtube: le.youtube }, $('go'));
     };
   }
-  function guardarTextos() { if ($('pres')) P.pres = $('pres').value; if ($('lnk')) P.lnk = $('lnk').value.trim(); }
+  function guardarTextos() { if ($('pres')) P.pres = $('pres').value; if ($('lnkS')) P.lnkS = $('lnkS').value.trim(); if ($('lnkY')) P.lnkY = $('lnkY').value.trim(); }
+  /** Enlaces pegados (17-nov): cada uno debe ser de su sitio; si no, se avisa y no se envía. Devuelve {spotify, youtube} o null. */
+  function leerEnlaces() {
+    var s = P.lnkS || '', y = P.lnkY || '';
+    var host = function (u) { var m = /^https?:\/\/([^\/?#]+)/i.exec(u); return m ? m[1].toLowerCase() : ''; };
+    if (s && !/(^|\.)(spotify\.com|spotify\.link)$/.test(host(s))) { toast('Ese enlace no parece de Spotify. Revisa que empiece por https://open.spotify.com/'); return null; }
+    if (y && !/(^|\.)(youtube\.com|youtu\.be)$/.test(host(y))) { toast('Ese enlace no parece de YouTube Music. Revisa que empiece por https://music.youtube.com/'); return null; }
+    return { spotify: s, youtube: y };
+  }
   function pasoManual(pre) {   // 3E: último recurso; Chiquito lo revisa
     pre = pre || {};
     P.enDiscos = false;
@@ -772,12 +785,16 @@
       '<div class="row"><label class="f" style="flex:1">Año<input type="text" id="ma" inputmode="numeric" value="' + esc(pre.anio || '') + '"></label><label class="f" style="flex:2">País de la banda<input type="text" id="mp" value="' + esc((P.artista && P.artista.pais) || '') + '"></label></div>' +
       '<label class="f">Canciones (una por línea, en orden)<textarea id="mc" style="min-height:180px"></textarea></label>' +
       '<label class="f">Presentación (opcional)<textarea id="pres">' + esc(P.pres || '') + '</textarea></label>' +
+      '<label class="f">Enlace del álbum en Spotify (opcional)<input type="text" id="lnkS" placeholder="Pega aquí el enlace de Spotify" value="' + esc(P.lnkS || '') + '" autocapitalize="off" autocomplete="off"></label>' +
+      '<label class="f">Enlace del álbum en YouTube Music (opcional)<input type="text" id="lnkY" placeholder="Pega aquí el enlace de YouTube Music" value="' + esc(P.lnkY || '') + '" autocapitalize="off" autocomplete="off"></label>' +
+      '<span class="muted" style="font-size:12.5px">Si los dejas vacíos, los botones de la propuesta abren la búsqueda del disco (YouTube Music lo busca solo cuando puede).</span>' +
       quePasa() + '<button class="btn" id="go">Proponer</button>';
     abrirHoja(h);
     $('back').onclick = function () { P.disco ? pasoDiscos() : pasoBuscar(P.res); };
     $('go').onclick = function () {
       guardarTextos();
-      enviar({ manual: true, banda: $('mb').value.trim(), disco: $('md').value.trim(), anio: $('ma').value.trim(), pais: $('mp').value.trim(),
+      var le = leerEnlaces(); if (!le) return;
+      enviar({ manual: true, spotify: le.spotify, youtube: le.youtube, banda: $('mb').value.trim(), disco: $('md').value.trim(), anio: $('ma').value.trim(), pais: $('mp').value.trim(),
         canciones: $('mc').value.split('\n').map(function (t) { return { titulo: t.trim() }; }).filter(function (c) { return c.titulo; }) }, $('go'));
     };
   }
@@ -1270,7 +1287,7 @@
     api('api_miembros').then(function (ms) {
       var act = ms.filter(function (m) { return m.activo === 'SI'; }), ex = ms.filter(function (m) { return m.activo !== 'SI'; });
       var fila = function (m) {
-        var tags = [m.rol === 'admin' ? 'admin' : m.rol === 'tecnico' ? 'admin técnico' : '', m.tipo === 'libre' ? 'libre' : '', m.en_pausa === 'SI' ? 'en pausa' : '', m.sin_whatsapp === 'SI' ? 'sin WhatsApp · enlace a ' + m.contacto : '', m.en_rotacion !== 'SI' && m.activo === 'SI' && m.tipo !== 'libre' ? 'fuera de la rotación' : ''].filter(String);
+        var tags = [m.rol === 'admin' ? 'admin' : m.rol === 'tecnico' ? 'admin técnico' : '', m.tipo === 'libre' ? 'libre' : '', m.en_pausa === 'SI' ? 'en pausa' : '', m.sin_whatsapp === 'SI' ? 'sin WhatsApp · enlace a ' + m.contacto : '', m.en_rotacion !== 'SI' && m.activo === 'SI' && m.tipo !== 'libre' ? 'fuera de la rotación' : ''].filter(String).map(cap1);
         return '<div class="mrow"><div><b>' + esc(m.nombre) + '</b>' + (m.cumple_dia ? ' <span class="muted" style="font-size:12.5px">🎂 ' + esc(m.cumple_dia) + '/' + esc(m.cumple_mes) + '</span>' : '') +
           (tags.length ? '<div class="muted" style="font-size:12px">' + esc(tags.join(' · ')) + '</div>' : '') + '</div><div class="row">' +
           (m.activo === 'SI' ? '<a class="btn small" target="_blank" rel="noopener" href="' + waLink(m.mensaje) + '">Enviar enlace</a><button class="btn small ghost" data-m="' + esc(m.nombre) + '">Más</button>'
@@ -1334,28 +1351,32 @@
       if (desde + lg.items.length < lg.total) { el.insertAdjacentHTML('beforeend', '<button class="btn small ghost" id="dblm">Ver más</button>'); $('dblm').onclick = function () { registro(el, desde + lg.items.length); }; }
     }).catch(function (e) { el.innerHTML = '<div class="err">' + esc(errMsg(e)) + '</div>'; });
   }
-  function editarRonda(ref) {
+  function editarRonda(ref, pre) {
     abrirHoja('<div class="top"><button class="back" id="back">‹ Volver al Panel</button></div><div class="spin"></div>'); $('back').onclick = cerrarHoja;
-    api('api_roundEditInfo', ref).then(function (r) {
+    (pre ? Promise.resolve(pre) : api('api_roundEditInfo', ref)).then(function (r) {
       var campo = function (k, t, tipo) { return '<label class="f">' + t + '<input type="text" id="re_' + k + '" value="' + esc(r[k] || '') + '"' + (tipo ? ' inputmode="' + tipo + '"' : '') + '></label>'; };
       var nn = function (x) { return String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, ''); };
-      var sel = function (k, t, ops) {
+      var sel = function (k, t, ops, lab) {
         var cur = String(r[k] || ''), hay = ops.some(function (o) { return nn(o) === nn(cur); });
         if (cur && !hay) ops = ops.concat([cur]);
         var elegido = false;
-        return '<label class="f">' + t + '<select id="re_' + k + '" class="sel">' + ops.map(function (o) { var s = !elegido && nn(o) === nn(cur); if (s) elegido = true; return '<option value="' + esc(o) + '"' + (s ? ' selected' : '') + '>' + esc(o || '—') + '</option>'; }).join('') + '</select></label>'; };
+        return '<label class="f">' + t + '<select id="re_' + k + '" class="sel">' + ops.map(function (o) { var s = !elegido && nn(o) === nn(cur); if (s) elegido = true; return '<option value="' + esc(o) + '"' + (s ? ' selected' : '') + '>' + esc(lab ? lab(o) : (o || '—')) + '</option>'; }).join('') + '</select></label>'; };
       var cs = r.canciones || [];
+      // 17-nov: también los que ya no están en el grupo (Archie, Fabián, Mora, Paul), para completar votos y proponentes de las primeras propuestas
+      var ant = (r.miembros || []).filter(function (m) { return !m.activo && S.miembros.indexOf(m.nombre) < 0; }).map(function (m) { return m.nombre; });
+      var todos = S.miembros.concat(ant);
+      var capi = function (x) { return x ? cap1(x) : '—'; };   // 17-nov: Normal, Cumpleaños, Póstuma
       var h = '<div class="top"><button class="back" id="back">‹ Volver al Panel</button><span class="k" style="margin-left:auto">Editar ' + esc('#' + r.numero) + '</span></div>' +
         '<h2>#' + esc(r.numero) + ' · ' + esc(r.banda) + '</h2>' + (r.historica ? '<div class="note">Ronda del historial: Los cambios quedan en el registro con tu nombre.</div>' : '') +
         campo('banda', 'Banda') + campo('disco', 'Disco') + '<div class="row">' + campo('anio', 'Año', 'numeric') + campo('pais', 'País') + '</div>' +
         sel('ganadora', 'Ganadora', [''].concat(cs.map(function (c) { return c.titulo; }))) +
-        sel('proponente', 'Propuso', [''].concat(S.miembros).concat(['Decisión colectiva'])) + sel('tipo', 'Tipo', r.tipos || ['normal', 'cumpleaños', 'póstuma']) + campo('homenaje', 'Homenaje a (póstumas)') +
+        sel('proponente', 'Propuso', [''].concat(todos).concat(['Decisión colectiva'])) + sel('tipo', 'Tipo', r.tipos || ['normal', 'cumpleaños', 'póstuma'], capi) + campo('homenaje', 'Homenaje a (póstumas)') +
         '<div class="row">' + campo('numero', 'Número', 'numeric') + campo('rotacion', 'Ronda', 'numeric') + '</div>' + campo('desempate', 'Cómo se decidió (empates)') +
         '<button class="btn" id="rego">Guardar cambios</button>' +
         '<details class="note"><summary><b>Canciones · ' + cs.length + '</b></summary><div id="recs" style="margin-top:8px">' + cs.map(function (c, i) {
           return '<div class="row cs" style="flex-wrap:nowrap" data-antes="' + esc(c.titulo) + '"><input type="text" value="' + esc(c.titulo) + '" style="flex:1"><span class="muted" style="font-size:12px;align-self:center">' + (c.votos || 0) + '</span><button class="btn small ghost" data-up="' + i + '">↑</button></div>';
         }).join('') + '</div><div class="row" style="flex-wrap:nowrap;margin-top:6px"><input type="text" id="renew" placeholder="Añadir una canción" style="flex:1"><button class="btn small ghost" id="readdc">Añadir</button></div><button class="btn small" id="recsgo" style="margin-top:8px">Guardar canciones</button></details>' +
-        '<details class="note"><summary><b>Corregir votos</b></summary><div class="row" style="flex-wrap:nowrap;margin-top:8px"><select id="vfm" class="sel" style="flex:1"><option value="">Miembro…</option>' + S.miembros.map(function (n) { return '<option>' + esc(n) + '</option>'; }).join('') + '</select>' +
+        '<details class="note"><summary><b>Corregir votos</b></summary><div class="row" style="flex-wrap:nowrap;margin-top:8px"><select id="vfm" class="sel" style="flex:1"><option value="">Miembro…</option>' + todos.map(function (n) { return '<option>' + esc(n) + '</option>'; }).join('') + '</select>' +
         '<select id="vfc" class="sel" style="flex:1"><option value="">Canción…</option>' + cs.map(function (c) { return '<option>' + esc(c.titulo) + '</option>'; }).join('') + '<option value="(abstención)">Abstención</option><option value="__quitar">Quitar su voto</option></select></div><button class="btn small" id="vfgo" style="margin-top:8px">Guardar voto</button></details>' +
         '<div class="row">' + (r.puedeCancelar ? '<button class="btn small ghost" id="recan">Cancelar esta propuesta</button>' : '') + (r.puedeReabrir ? '<button class="btn small ghost" id="reabr">Reabrir la votación</button>' : '') + '</div>';
       abrirHoja(h); $('back').onclick = cerrarHoja;
@@ -1374,7 +1395,7 @@
       };
       $('vfgo').onclick = function () {
         var b = this, m = $('vfm').value, c = $('vfc').value; if (!m || !c) { toast('Elige miembro y canción'); return; }
-        ocupado(b); api('api_voteFix', ref, m, c === '__quitar' ? '' : c).then(function (x) { toast('Voto guardado'); if (x && x.aviso) toast(x.aviso); editarRonda(ref); }).catch(function (e) { toast(errMsg(e)); libre(b); });
+        ocupado(b); api('api_voteFix', ref, m, c === '__quitar' ? '' : c).then(function (x) { toast('Voto guardado'); if (x && x.aviso) toast(x.aviso); editarRonda(ref, x && x.info); }).catch(function (e) { toast(errMsg(e)); libre(b); });
       };
       var can = $('recan'); if (can) can.onclick = function () { var b = this; confirmar(b, function () { ocupado(b); api('api_roundCancel', ref, '').then(function (x) { toast('Propuesta cancelada'); cerrarHoja(); cargar(true); }).catch(function (e) { toast(errMsg(e)); libre(b); }); }); };
       var reo = $('reabr'); if (reo) reo.onclick = function () { var b = this; confirmar(b, function () { ocupado(b); api('api_roundReopen', ref).then(function () { toast('Reabierta'); cerrarHoja(); cargar(true); }).catch(function (e) { toast(errMsg(e)); libre(b); }); }); };

@@ -58,7 +58,6 @@ h2{font-family:var(--f-head);font-weight:800;font-size:24px;text-transform:upper
 .chip.done{background:var(--ok-soft);color:var(--ok)} .chip.go{background:var(--blood);color:var(--bone)}
 .chip.gold{background:var(--gold-soft);color:var(--gold)} .chip.no{background:var(--blood-soft);color:#E0857B}
 .chip.grey{background:var(--slab2);color:var(--dust)}
-.chip.x2{background:var(--gold);color:var(--ink);padding:2px 6px;font-weight:600}
 
 .note{background:var(--slab);border:1px dashed var(--line);border-radius:12px;padding:12px;color:var(--dust);font-size:14px}
 .note b{color:var(--bone);font-weight:600}
@@ -277,18 +276,8 @@ select.sel:disabled,input:disabled{opacity:.55}
 .cuentos-t{margin:18px 0 2px;text-align:center}
 .cuentos-t span{font-family:"Creepster","Pirata One",Georgia,serif;font-size:34px;line-height:1;letter-spacing:1.5px;color:var(--blood);text-shadow:0 2px 0 #4a0e0a,0 0 18px rgba(179,41,30,.45)}
 #dc{display:flex;flex-direction:column;gap:10px}
-.cuaderno{border-color:#4a1512;background:linear-gradient(#1c1113,#151216 55%);padding:30px 14px 14px 18px}
+.cuaderno{border-color:#4a1512;background:linear-gradient(rgba(12,8,10,.5),rgba(12,8,10,.62)),#120b0d url(img/cuaderno_fondo.jpg) center/cover no-repeat;padding:20px 16px 16px 18px;min-height:150px}   /* 17-nov: fondo de sangre de Milena */
 .cuaderno::before{display:none}
-.cuaderno .sangre{position:absolute;left:0;right:0;top:0;height:26px;pointer-events:none;
-  background:
-    radial-gradient(ellipse 7px 22px at 9% 0,var(--blood) 98%,transparent 100%),
-    radial-gradient(ellipse 5px 13px at 21% 0,var(--blood) 98%,transparent 100%),
-    radial-gradient(ellipse 9px 26px at 37% 0,var(--blood) 98%,transparent 100%),
-    radial-gradient(ellipse 5px 10px at 50% 0,var(--blood) 98%,transparent 100%),
-    radial-gradient(ellipse 7px 18px at 64% 0,var(--blood) 98%,transparent 100%),
-    radial-gradient(ellipse 6px 24px at 79% 0,var(--blood) 98%,transparent 100%),
-    radial-gradient(ellipse 5px 12px at 92% 0,var(--blood) 98%,transparent 100%),
-    linear-gradient(var(--blood) 0 5px,transparent 5px)}
 .cuaderno .hand{font-size:25px}
 .cuaderno .w{font-size:21px}
 .cuaderno .cabrir{margin-top:10px;font-size:13px;color:var(--bone);text-decoration:underline;text-underline-offset:3px}
@@ -318,7 +307,7 @@ button.falta-b.v{border-color:var(--line);text-align:right}
 button.falta-b.v.w{color:var(--gold);border-color:var(--gold)}
 .adm-ed{width:100%;margin-top:8px;border-style:dashed}
 /* Inicio: playlist de The Skull (14-nov) */
-.plb{border:1px solid var(--blood);border-radius:14px;padding:14px;background:linear-gradient(#1f1315,#17151a);display:flex;flex-direction:column;gap:6px}
+.plb{border:1px solid var(--chrome-lo);border-radius:14px;padding:14px;background:linear-gradient(#1d2026,#16171b);display:flex;flex-direction:column;gap:6px}
 .plb-t{font-family:var(--f-head);font-size:24px;letter-spacing:.5px;text-transform:uppercase;color:var(--bone)}
 .plb-s{color:var(--dust);font-size:14px}
 .plb .row{margin-top:6px}
@@ -326,6 +315,9 @@ button.falta-b.v.w{color:var(--gold);border-color:var(--gold)}
 
 .plb .btn{display:flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;min-width:0}
 .plb .btn .ic{font-size:15px;line-height:1}
+.plb .btn{background:linear-gradient(var(--steel-1),var(--steel-2));border:1px solid var(--chrome-lo);color:var(--chrome-hi);box-shadow:inset 0 1px 0 rgba(255,255,255,.14)}   /* 17-nov: todo acero, nada de rojo (ni el borde ni la sombra) */
+.plb .btn:active{background:var(--steel-2);transform:translateY(1px)}
+.plb .btn .ic{color:var(--chrome)}
 
 /* Cabecera: por debajo de la barra de hora y batería del iPhone, no detrás (14-nov) */
 .hero{margin-top:env(safe-area-inset-top,0px)}
