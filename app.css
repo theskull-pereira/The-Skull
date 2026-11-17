@@ -425,3 +425,5 @@ details.mini:not(.pc) > summary{color:var(--dust);font-size:13.5px;cursor:pointe
 .mrow > .dos{width:100%}
 .aj{flex-direction:column;align-items:stretch;gap:8px;padding:10px 0}
 .turno .t2.adm{color:var(--gold)}
+/* 17-nov (Carlos): en Números, los títulos de grupo («Los que votan», «Los que llegan tarde»…) más grandes y visibles */
+.k.sec-t.grp{font-family:var(--f-head);font-weight:800;font-size:22px;letter-spacing:.04em;color:var(--blood);margin:26px 0 10px;padding-bottom:8px;border-bottom:2px solid var(--blood);line-height:1.1}

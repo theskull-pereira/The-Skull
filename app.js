@@ -994,20 +994,20 @@
       h += '<div class="tiles"><div class="tile"><b>' + miles(s.rondas) + '</b><span class="muted">rondas cerradas</span></div><div class="tile"><b>' + miles(s.bandas) + '</b><span class="muted">bandas distintas</span></div>' +
         '<div class="tile"><b>' + rc.empates + '</b><span class="muted">empates · ' + rc.empatesDoble + ' los decidió el voto doble</span></div><div class="tile"><b>' + pct(rc.tituloGana) + '</b><span class="muted">de las veces gana la canción que da nombre al disco</span></div></div>';
       var td = rk.todos || {}, ptd = pr.todos || {};
-      h += '<span class="k sec-t">Los que votan</span>';
+      h += '<span class="k sec-t grp">Los que votan</span>';
       h += ranking('Participación', 'De las rondas en las que estaba en el grupo, a cuántas respondió con un voto', rk.participacion, function (x) { return pct(x.participacion); }, null, td.participacion);
       h += ranking('Ojo de ganador', 'Con qué frecuencia su voto fue para la canción que terminó ganando', rk.ojo, function (x) { return pct(x.ojo); }, null, td.ojo);
       h += ranking('Lobo solitario', 'Con qué frecuencia votó una canción que nadie más votó', rk.lobo, function (x) { return pct(x.solo); }, null, td.lobo);
       h += ranking('Racha', 'La racha más larga de cada uno: Rondas seguidas votando sin faltar. «En curso» = esa racha sigue viva hoy', rk.racha, function (x) { return x.racha + (x.rachaActual === x.racha ? ' <span class="chip done" style="font-size:9px;padding:2px 6px">en curso</span>' : ''); }, null, td.racha);
       // 17-nov (Carlos): para reírse un poco de los amigos. Solo cuentan los votos con fecha (desde la #906 y en la app).
       if ((rk.tardios && rk.tardios.length) || (rk.apaga && rk.apaga.length) || (rk.tortuga && rk.tortuga.length)) {
-        h += '<span class="k sec-t">Los que llegan tarde</span>';
+        h += '<span class="k sec-t grp">Los que llegan tarde</span>';
         h += ranking('El que llega cuando ya se fueron todos', 'Votos que llegaron con la ronda ya cerrada. Cuentan igual, pero quedan anotados', rk.tardios, function (x) { return x.tardios + (x.tardios === 1 ? ' voto' : ' votos'); }, null, td.tardios);
         h += ranking('El apagaluces', 'Cuántas veces fue el último en votar antes del cierre: el que apaga la luz y cierra la puerta', rk.apaga, function (x) { return x.apaga + (x.apaga === 1 ? ' vez' : ' veces'); }, null, td.apaga);
         h += ranking('La tortuga', 'Días de media entre la propuesta y su voto (mínimo 10 votos con fecha)', rk.tortuga, function (x) { return String(x.tortuga).replace('.', ',') + ' días'; }, null, td.tortuga);
         h += '<p class="muted" style="font-size:12.5px;margin:-4px 0 14px">Solo cuentan los votos con fecha: desde la #906 (chat de WhatsApp) y los de la app.</p>';
       }
-      h += '<span class="k sec-t">Afinidad</span>';
+      h += '<span class="k sec-t grp">Afinidad</span>';
       // Afinidad (14-nov): arriba, las 5 parejas más fuertes sin repetir a nadie; detrás, una línea por persona
       var apm = s.afinidadPorMiembro || [];
       var porPersona = apm.length ? botonMas('Ver el de cada uno (' + apm.length + ')', apm.map(function (m) {
@@ -1018,13 +1018,13 @@
       h += ranking('Almas gemelas', 'Las parejas que más veces votaron la misma canción. Cada persona sale una sola vez', s.almas, function (x) { return pct(x.pct); });
       h += ranking('Polos opuestos', 'Las parejas que menos veces votaron la misma canción. Cada persona sale una sola vez', s.opuestos, function (x) { return pct(x.pct); });
       if (porPersona) h += '<div class="rank"><div class="rk-h"><b>El alma gemela y el opuesto de cada uno</b><span class="muted">Con quién coincide más y con quién menos cada miembro</span></div>' + porPersona + '</div>';
-      h += '<span class="k sec-t">Los que proponen</span>';
+      h += '<span class="k sec-t grp">Los que proponen</span>';
       h += ranking('El profeta', 'En sus propias propuestas, qué porcentaje de las veces ganó la canción que él mismo votó', pr.profeta, function (x) { return pct(x.profeta); }, null, ptd.profeta);
       h += ranking('El que une', 'Qué tan de acuerdo estuvo el grupo con sus discos: Más alto = los votos se juntaron en una sola canción', pr.une, function (x) { return pct(x.une); }, null, ptd.une);
       h += ranking('El explorador', 'Qué porcentaje de sus propuestas fue una banda que el grupo nunca había propuesto', pr.explorador, function (x) { return pct(x.explorador); }, null, ptd.explorador);
       h += ranking('El arqueólogo', 'Año medio de los discos que propone: Los más antiguos primero', pr.arqueologo, function (x) { return x.edad; }, null, ptd.arqueologo);
       h += ranking('El moderno', 'Año medio de los discos que propone: Los más recientes primero', pr.moderno, function (x) { return x.edad; }, null, ptd.moderno);
-      h += '<span class="k sec-t">Récords</span>';
+      h += '<span class="k sec-t grp">Récords</span>';
       h += rankingRondas('Las más unánimes', 'Propuestas donde más gente votó la misma canción (mínimo 8 votos)', rc.unanimes, rc.unanimesTodas, function (r) { return r.ganadoraVotos + ' de ' + r.votos; });
       h += rankingRondas('Las más divididas', 'Propuestas con más canciones distintas votadas (mínimo 8 votos)', rc.divididas, rc.divididasTodas, function (r) { return r.distintas + ' canciones'; });
       h += barrasMas('Las bandas más propuestas', 'Cuántos de sus discos se han propuesto en el grupo', rc.topBandas, 10);
