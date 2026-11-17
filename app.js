@@ -130,6 +130,8 @@
     if (!TOKEN) { $('view').innerHTML = sinEnlace(); return Promise.resolve(); }
     var deMemoria = false;
     if (!S) { var m = memoLee('estado'); if (m && m.me) { S = m; deMemoria = true; tabs(); render(); } }   // al instante, con lo último guardado
+    ULT_REFRESCO = Date.now(); CARGANDO++;   // 17-nov: la carga cuenta como refresco, y mientras va no se pide otra (antes se pedían 2 a 4 a la vez al abrir)
+    var fin = function () { CARGANDO = Math.max(0, CARGANDO - 1); };
     return api('api_state').then(function (st) {
       var igual = deMemoria && JSON.stringify(st) === JSON.stringify(S);
       S = st; memoPon('estado', st);
@@ -146,7 +148,7 @@
         return;
       }
       $('view').innerHTML = '<div style="height:20px"></div><div class="err">' + esc(errMsg(e)) + '</div>' + sinEnlace();
-    });
+    }).then(fin, function (e) { fin(); throw e; });
   }
   /* Puesta al día sola (14-nov): el teléfono guarda la app unos 10 minutos (o más, en el icono de la pantalla de inicio).
    * La app mira si hay una versión más nueva publicada y, si la hay, se recarga sola con ella. */
@@ -170,9 +172,9 @@
   document.addEventListener('visibilitychange', function () { if (!document.hidden) setTimeout(mirarVersion, 1500); });
   /* Que lo que hace otro (cerrar, cancelar, votar) se vea sin tener que cerrar la app (14-nov):
    * se vuelve a pedir el estado al volver a la app y cada 2 minutos mientras está a la vista. */
-  var ULT_REFRESCO = 0;
+  var ULT_REFRESCO = 0, CARGANDO = 0;   // CARGANDO: peticiones de estado en vuelo
   function refrescar() {
-    if (!TOKEN || !S || document.hidden || Date.now() - ULT_REFRESCO < 20000) return;
+    if (!TOKEN || !S || document.hidden || CARGANDO || Date.now() - ULT_REFRESCO < 20000) return;
     ULT_REFRESCO = Date.now();
     cargar(true);
   }
