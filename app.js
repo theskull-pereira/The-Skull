@@ -999,6 +999,14 @@
       h += ranking('Ojo de ganador', 'Con qué frecuencia su voto fue para la canción que terminó ganando', rk.ojo, function (x) { return pct(x.ojo); }, null, td.ojo);
       h += ranking('Lobo solitario', 'Con qué frecuencia votó una canción que nadie más votó', rk.lobo, function (x) { return pct(x.solo); }, null, td.lobo);
       h += ranking('Racha', 'La racha más larga de cada uno: Rondas seguidas votando sin faltar. «En curso» = esa racha sigue viva hoy', rk.racha, function (x) { return x.racha + (x.rachaActual === x.racha ? ' <span class="chip done" style="font-size:9px;padding:2px 6px">en curso</span>' : ''); }, null, td.racha);
+      // 17-nov (Carlos): para reírse un poco de los amigos. Solo cuentan los votos con fecha (desde la #906 y en la app).
+      if ((rk.tardios && rk.tardios.length) || (rk.apaga && rk.apaga.length) || (rk.tortuga && rk.tortuga.length)) {
+        h += '<span class="k sec-t">Los que llegan tarde</span>';
+        h += ranking('El que llega cuando ya se fueron todos', 'Votos que llegaron con la ronda ya cerrada. Cuentan igual, pero quedan anotados', rk.tardios, function (x) { return x.tardios + (x.tardios === 1 ? ' voto' : ' votos'); }, null, td.tardios);
+        h += ranking('El apagaluces', 'Cuántas veces fue el último en votar antes del cierre: el que apaga la luz y cierra la puerta', rk.apaga, function (x) { return x.apaga + (x.apaga === 1 ? ' vez' : ' veces'); }, null, td.apaga);
+        h += ranking('La tortuga', 'Días de media entre la propuesta y su voto (mínimo 10 votos con fecha)', rk.tortuga, function (x) { return String(x.tortuga).replace('.', ',') + ' días'; }, null, td.tortuga);
+        h += '<p class="muted" style="font-size:12.5px;margin:-4px 0 14px">Solo cuentan los votos con fecha: desde la #906 (chat de WhatsApp) y los de la app.</p>';
+      }
       h += '<span class="k sec-t">Afinidad</span>';
       // Afinidad (14-nov): arriba, las 5 parejas más fuertes sin repetir a nadie; detrás, una línea por persona
       var apm = s.afinidadPorMiembro || [];
