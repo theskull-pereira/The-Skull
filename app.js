@@ -252,8 +252,9 @@
         '<span class="t2">Elige una banda y un disco para que el grupo lo vote.</span><button class="btn" data-prop="normal">Proponer un disco</button></div>';
     } else if (sig) {
       h += '<div class="turno"><span class="t1">Ahora le toca proponer a ' + esc(sig) + '</span>' +
-        '<span class="t2">' + (llenas ? 'Ya hay el máximo de propuestas abiertas: Podrá proponer cuando se cierre una.' : 'Cuando lo haga, aparecerá aquí para que votes.') + '</span>' +
-        (S.me.esAdmin && S.puedo.porOtro && !llenas ? '<button class="btn ghost small" data-prop="normal" data-por="' + esc(sig) + '">Proponer en nombre de ' + esc(sig) + '</button>' : '') + '</div>';
+        '<span class="t2">' + (llenas ? 'Ya hay el máximo de propuestas abiertas, así que ' + esc(sig) + ' podrá proponer cuando se cierre una.' : 'Cuando lo haga, aparecerá aquí para que votes.') + '</span>' +
+        (S.me.esAdmin && S.puedo.porOtro ? (llenas ? '<span class="t2 adm">Como admin puedes proponer igual, sin esperar.</span><button class="btn ghost" data-prop="normal" data-por="' + esc(sig) + '">Proponer ahora (como admin)</button>'
+          : '<button class="btn ghost" data-prop="normal" data-por="' + esc(sig) + '">Proponer en nombre de ' + esc(sig) + '</button>') : '') + '</div>';
     }
     if (S.puedo.cumple) h += '<div class="turno cumple"><span class="t1">🎂 Tienes una propuesta de cumpleaños</span><span class="t2">Va aparte del turno normal: Elige tu disco cuando quieras.</span>' +
       '<button class="btn goldb" data-prop="cumpleaños">Hacer mi propuesta de cumpleaños</button></div>';
@@ -1119,15 +1120,15 @@
 
   /* ---------- Panel (7A–7I), solo admins ---------- */
   var PANEL = { abiertos: { hoy: true } };
-  function seccion(id, titulo, extra) {
-    return '<details class="psec" data-s="' + id + '"' + (PANEL.abiertos[id] ? ' open' : '') + '><summary><span>' + titulo + '</span>' + (extra || '') + '</summary><div class="pbody" id="ps_' + id + '">' +
+  function seccion(id, titulo, extra, sub) {
+    return '<details class="psec" data-s="' + id + '"' + (PANEL.abiertos[id] ? ' open' : '') + '><summary><span><b class="pt">' + titulo + '</b>' + (sub ? '<small class="ps">' + sub + '</small>' : '') + '</span>' + (extra || '') + '</summary><div class="pbody" id="ps_' + id + '">' +
       (id === 'hoy' ? '' : '<div class="spin" style="margin:20px auto"></div>') + '</div></details>';
   }
   function vistaPanel() {
     var v = $('view'), a = S.admin || {};
     v.innerHTML = '<div class="pagehead"><h2>Panel</h2><span class="k">' + esc(S.me.nombre) + (S.me.esTecnico ? ' · admin técnico' : ' · admin') + '</span></div>' +
-      seccion('hoy', 'Hoy') + seccion('revisar', 'Por revisar', a.porRevisar ? '<span class="chip go" id="chipRev">' + a.porRevisar + '</span>' : '') +
-      seccion('turnos', 'Turnos y cumpleaños') + seccion('miembros', 'Miembros y enlaces') + seccion('datos', 'Datos') + seccion('ajustes', 'Ajustes') +
+      seccion('hoy', 'Hoy', '', 'Votaciones abiertas, empates y cierres') + seccion('revisar', 'Por revisar', a.porRevisar ? '<span class="chip go" id="chipRev">' + a.porRevisar + '</span>' : '', 'Dudas del cuaderno que solo tú puedes resolver') +
+      seccion('turnos', 'Turnos y cumpleaños', '', 'Quién propone, proponer por otro, póstumas y cumpleaños') + seccion('miembros', 'Miembros y enlaces', '', 'Altas, pausas y el enlace personal de cada uno') + seccion('datos', 'Datos', '', 'Corregir rondas, canciones y votos · registro') + seccion('ajustes', 'Ajustes', '', 'Mensajes de WhatsApp, reglas y valores de la app') +
       '<p class="foot">' + esc(S.grupo || 'The Skull') + ' · v' + esc(S.version || '1.1') + '</p>';
     v.onclick = null;
     v.querySelectorAll('details.psec').forEach(function (d) {
@@ -1154,24 +1155,30 @@
     $('back').onclick = function () { cerrarHoja(); cargar(true).then(function () { if (TAB === 'panel') vistaPanel(); }); };
   }
 
+  /** Tarjeta del Panel: título, una línea que explica para qué sirve, y debajo lo que se puede hacer (botones a lo ancho). */
+  function pc(titulo, porque, cuerpo, cls) {
+    return '<div class="pc' + (cls ? ' ' + cls : '') + '"><h3>' + titulo + '</h3>' + (porque ? '<p class="why">' + porque + '</p>' : '') + (cuerpo || '') + '</div>';
+  }
+
   // Hoy: votaciones abiertas, empates, llamadas de atención
   function panelHoy(box) {
     var h = '';
     S.desempates.forEach(function (r) {
-      h += '<div class="warn"><span><b>Empate en la #' + esc(r.numero) + ' ' + esc(r.banda) + '.</b> ' + esc(r.desempate) + '</span><button class="btn small" data-r="' + esc(r.id) + '">Elegir la ganadora</button></div>';
+      h += pc('Empate en la #' + esc(r.numero) + ' · ' + esc(r.banda), esc(r.desempate), '<div class="acts"><button class="btn" data-r="' + esc(r.id) + '">Elegir la ganadora</button></div>', 'aviso');
     });
-    if (!S.abiertas.length) h += '<div class="note">No hay votaciones abiertas.</div>';
+    if (!S.abiertas.length && !S.desempates.length) h += pc('No hay votaciones abiertas', 'Cuando alguien proponga un disco, aparecerá aquí con sus botones para cerrarla, recordar o ver los votos.', '');
     S.abiertas.filter(function (r) { return r.estado !== 'desempate'; }).forEach(function (r) {
-      var lista = r.todosVotaron ? '<span class="chip done">Todos votaron · ¿cerrar?</span>' : (r.listaParaCerrar ? '<span class="chip gold">Lista para cerrar</span>' : '');
+      var lista = r.todosVotaron ? '<span class="chip done">Todos votaron</span>' : (r.listaParaCerrar ? '<span class="chip gold">Lista para cerrar</span>' : '');
       var lim = (r.estado === 'whatsapp' ? (r.canciones >= 2 ? 'Se vota en el chat y en la app · ' : 'Se vota en WhatsApp · ') + r.diasAbierta + ' días abierta' : (r.diasAbierta ? r.diasAbierta + (r.diasAbierta === 1 ? ' día abierta' : ' días abierta') : ''));
-      h += '<div class="pcard"><div class="pc-h"><span class="num">#' + esc(r.numero) + '</span> <b>' + esc(r.banda) + '</b> · ' + esc(r.disco) + ' ' + lista + '</div>' +
-        '<div class="muted" style="font-size:13px">' + r.votaron + ' de ' + r.total + ' votaron' + (lim ? ' · ' + esc(lim) : '') + '</div>' +
+      var cerrar = '<button class="btn" data-cerrar="' + esc(r.id) + '">Cerrar la votación</button>';
+      var acts = r.estado === 'whatsapp'
+        ? (r.canciones >= 2 ? cerrar : '') + '<button class="btn' + (r.canciones >= 2 ? ' steel' : '') + '" data-wa="' + esc(r.id) + '">Registrar el resultado del chat</button>'
+        : cerrar;
+      h += '<div class="pc"><h3><span class="num">#' + esc(r.numero) + '</span> ' + esc(r.banda) + ' · ' + esc(r.disco) + '</h3>' + (lista ? '<div>' + lista + '</div>' : '') +
+        '<p class="why">' + r.votaron + ' de ' + r.total + ' votaron' + (lim ? ' · ' + esc(lim) : '') + '</p>' +
         (r.faltan && r.faltan.length ? '<div class="faltan">Faltan: <b>' + esc(r.faltan.join(', ')) + '</b></div>' : '') +
-        '<div class="row" style="margin-top:8px">' +
-        (r.estado === 'whatsapp' ? (r.canciones >= 2 ? '<button class="btn small" data-cerrar="' + esc(r.id) + '">Cerrar votación</button>' : '') + '<button class="btn small' + (r.canciones >= 2 ? ' ghost' : '') + '" data-wa="' + esc(r.id) + '">Registrar resultado del chat</button>'
-          : '<button class="btn small" data-cerrar="' + esc(r.id) + '">Cerrar votación</button>') +
-        '<button class="btn small ghost" data-recordar="' + esc(r.id) + '">Recordatorio</button><button class="btn small ghost" data-r="' + esc(r.id) + '">Ver</button></div>' +
-        '<div class="wa-box" id="wa_' + esc(r.id) + '" hidden><label class="f">Pega aquí el resultado como lo escribes en el chat (una línea por canción: «Canción   número»)<textarea id="wat_' + esc(r.id) + '" style="min-height:150px"></textarea></label><button class="btn small" data-wago="' + esc(r.id) + '">Guardar y cerrar</button></div></div>';
+        '<div class="acts">' + acts + '<div class="dos"><button class="btn ghost" data-recordar="' + esc(r.id) + '">Preparar recordatorio</button><button class="btn ghost" data-r="' + esc(r.id) + '">Ver la ronda</button></div></div>' +
+        '<div class="wa-box" id="wa_' + esc(r.id) + '" hidden><label class="f">Pega aquí el resultado como lo escribes en el chat (una línea por canción: «Canción   número»)<textarea id="wat_' + esc(r.id) + '" style="min-height:150px"></textarea></label><button class="btn" data-wago="' + esc(r.id) + '">Guardar y cerrar</button></div></div>';
     });
     box.innerHTML = h;
     box.onclick = function (e) {
@@ -1199,16 +1206,16 @@
       // 12-nov: el número del Panel se pone al día con lo que de verdad queda (algunas preguntas se cierran solas al abrir la bandeja)
       var chipRev = $('chipRev'); if (chipRev) { if (ib.preguntas.length) chipRev.textContent = ib.preguntas.length; else chipRev.style.display = 'none'; }
       var dl = '<datalist id="dlm">' + (ib.miembros || []).map(function (m) { return '<option value="' + esc(m) + '">'; }).join('') + '</datalist>';
-      var h = dl + (ib.preguntas.length ? '' : '<div class="note">No hay nada por revisar. 🤘</div>');
+      var h = dl + (ib.preguntas.length ? '' : pc('Nada por revisar 🤘', 'Cuando el cuaderno tenga una duda que solo tú puedes resolver, saldrá aquí.', ''));
       ib.preguntas.forEach(function (q) {
         var accion = { homenaje: 'Escribe a quién homenajea', proponente: 'Quién la propuso', cumpleanos: 'De quién era el cumpleaños', voto: 'La canción correcta', ganadora: 'La ganadora correcta' }[q.accion];
-        h += '<div class="pcard"><div class="k" style="color:var(--gold)">' + esc(q.tipo) + '</div>' + (q.ronda ? '<button class="linkb" data-r="' + esc(q.rid) + '">' + esc(q.ronda) + '</button>' : (q.banda ? '<b>' + esc(q.banda + (q.disco ? ' – ' + q.disco : '')) + '</b>' : '')) +
-          '<div style="font-size:14px;margin:4px 0 8px">' + esc(q.detalle) + '</div>' +
-          (accion ? '<div class="row" style="flex-wrap:nowrap"><input type="text" id="qa_' + q.fila + '" placeholder="' + esc(accion) + '"' + (/proponente|cumpleanos/.test(q.accion) ? ' list="dlm"' : '') + ' style="flex:1"><button class="btn small" data-aplicar="' + q.fila + '">Aplicar</button></div>' + (q.accion === 'proponente' ? '<div class="row"><button class="btn small ghost" data-postuma="' + q.fila + '">Es póstuma (decisión colectiva)</button></div>' : '')
-          + ''
-            : '<div class="row" style="flex-wrap:nowrap"><input type="text" id="qa_' + q.fila + '" placeholder="Tu respuesta" style="flex:1"><button class="btn small ghost" data-texto="' + q.fila + '">Guardar</button></div>') + '</div>';
+        h += '<div class="pc"><div class="k kg">' + esc(q.tipo) + '</div>' + (q.ronda ? '<button class="linkb" data-r="' + esc(q.rid) + '">' + esc(q.ronda) + '</button>' : (q.banda ? '<h3>' + esc(q.banda + (q.disco ? ' – ' + q.disco : '')) + '</h3>' : '')) +
+          '<p class="why">' + esc(q.detalle) + '</p>' +
+          (accion ? '<label class="f">' + esc(accion) + '<input type="text" id="qa_' + q.fila + '" placeholder="' + esc(accion) + '"' + (/proponente|cumpleanos/.test(q.accion) ? ' list="dlm"' : '') + '></label>' +
+              '<div class="acts"><button class="btn" data-aplicar="' + q.fila + '">Aplicar esta respuesta</button>' + (q.accion === 'proponente' ? '<button class="btn ghost" data-postuma="' + q.fila + '">Es póstuma (decisión colectiva)</button>' : '') + '</div>'
+            : '<label class="f">Tu respuesta<input type="text" id="qa_' + q.fila + '"></label><div class="acts"><button class="btn ghost" data-texto="' + q.fila + '">Guardar mi respuesta</button></div>') + '</div>';
       });
-      if (ib.avisos) h += '<div class="note"><b>' + ib.avisos + ' avisos de la importación</b> (lo que el cuaderno corrigió del chat y cosas así; solo para leer).<div class="row" style="margin-top:8px"><button class="btn small ghost" id="vav">Ver avisos</button><button class="btn small ghost" id="mav">Marcar todos como vistos</button></div><div id="lav"></div></div>';
+      if (ib.avisos) h += pc('Avisos de la importación', '<b>' + ib.avisos + ' avisos</b>: lo que el cuaderno corrigió del chat y cosas así. Son solo para leer.', '<div class="acts"><button class="btn ghost" id="vav">Ver los avisos</button><button class="btn ghost" id="mav">Marcar todos como vistos</button></div><div id="lav"></div>');
       box.innerHTML = h;
       box.onclick = function (e) {
         var b = e.target.closest('button'); if (!b) return;
@@ -1223,25 +1230,31 @@
     }).catch(function (e) { box.innerHTML = '<div class="err">' + esc(errMsg(e)) + '</div>'; });
   }
 
-  // Turnos y cumpleaños
+  // Turnos y cumpleaños: tres tarjetas separadas (turno, proponer por otro, cumpleaños)
   function panelTurnos(box) {
-    var a = S.admin, rot = a.rotacion || [];
+    var a = S.admin, rot = a.rotacion || [], hu = S.huecos || {};
+    var llenas = hu.normalSlot === false, abiertas = (hu.normalOpen || 0) + (hu.specialOpen || 0);
     var opts = function (lista) { return lista.map(function (n) { return '<option>' + esc(n) + '</option>'; }).join(''); };
-    var h = '<div class="note"><dl class="facts"><dt>Próximo en proponer</dt><dd><b>' + esc(S.siguiente || '—') + '</b></dd><dt>Último turno</dt><dd>' + esc(a.ultimoTurno || '—') + '</dd>' +
-      (a.enPausa && a.enPausa.length ? '<dt>En pausa</dt><dd>' + esc(a.enPausa.join(', ')) + '</dd>' : '') + '</dl></div>' +
-      '<div class="row"><button class="btn small ghost" id="tsk">Saltar a ' + esc(S.siguiente || '') + '</button></div>' +
-      '<label class="f">Que el siguiente sea otro<div class="row" style="flex-wrap:nowrap"><select id="tnx" class="sel"><option value="">Elige…</option>' + opts(rot) + '</select><button class="btn small ghost" id="tnxb">Cambiar</button></div></label>' +
-      '<details class="note"><summary>Orden de la rotación · ' + rot.length + '</summary><ol class="rotlist">' + rot.map(function (n) { return '<li' + (n === S.siguiente ? ' class="next"' : '') + '>' + esc(n) + '</li>'; }).join('') + '</ol></details>' +
-      '<span class="k sec-t">Cola de cumpleaños</span><div class="chips">' + (S.colaCumples.length ? S.colaCumples.map(function (n) { return '<span class="fchip sm">' + esc(n) + ' <button class="x" data-quitar="' + esc(n) + '">×</button></span>'; }).join('') : '<span class="muted">Vacía</span>') + '</div>' +
-      '<label class="f">Añadir a la cola<div class="row" style="flex-wrap:nowrap"><select id="cad" class="sel"><option value="">Elige…</option>' + opts(S.miembros) + '</select><button class="btn small ghost" id="cadb">Añadir</button></div></label>' +
-      ((a.proximosCumples || []).length ? '<div class="muted" style="font-size:13px">Próximos cumpleaños: ' + a.proximosCumples.map(function (c) { return esc(c.miembro) + ' (' + (c.dias === 0 ? 'hoy' : 'en ' + c.dias + ' días') + ')'; }).join(', ') + '</div>' : '') +
-      '<span class="k sec-t">Proponer</span><label class="f">Proponer en nombre de otro miembro<div class="row" style="flex-wrap:nowrap"><select id="ppor" class="sel"><option value="">Elige…</option>' + opts(S.miembros) + '</select><button class="btn small ghost" id="pporb">Proponer</button></div></label>' +
-      '<button class="btn ghost" id="post">✝️ Empezar una propuesta póstuma</button>';
+    var h = pc('Turno de proponer', 'Quién propone el próximo disco. Si alguien no puede, aquí lo saltas o eliges a otro.',
+      '<dl class="facts"><dt>Le toca a</dt><dd><b>' + esc(S.siguiente || '—') + '</b></dd><dt>Último turno</dt><dd>' + esc(a.ultimoTurno || '—') + '</dd>' +
+      (a.enPausa && a.enPausa.length ? '<dt>En pausa</dt><dd>' + esc(a.enPausa.join(', ')) + '</dd>' : '') + '</dl>' +
+      '<div class="acts"><button class="btn ghost" id="tsk">Saltar el turno de ' + esc(S.siguiente || '') + '</button></div>' +
+      '<label class="f">O elige a quién le toca ahora<div class="acts"><select id="tnx" class="sel"><option value="">Elige a un miembro…</option>' + opts(rot) + '</select><button class="btn ghost" id="tnxb">Que le toque a esa persona</button></div></label>' +
+      '<details class="mini"><summary>Ver el orden de la rotación · ' + rot.length + '</summary><ol class="rotlist">' + rot.map(function (n) { return '<li' + (n === S.siguiente ? ' class="next"' : '') + '>' + esc(n) + '</li>'; }).join('') + '</ol></details>');
+    h += pc('Proponer en nombre de otro miembro', llenas
+        ? 'Ya hay ' + abiertas + ' propuestas abiertas (el máximo), así que los miembros no pueden proponer hasta que se cierre una. <b>Tú, como admin, puedes proponer igual.</b>'
+        : 'Elige a quién y busca el disco por esa persona (por ejemplo, si no tiene la app a mano).',
+      '<div class="acts"><select id="ppor" class="sel"><option value="">Elige a un miembro…</option>' + opts(S.miembros) + '</select><button class="btn' + (llenas ? '' : ' steel') + '" id="pporb">' + (llenas ? 'Proponer ahora (como admin)' : 'Proponer en su nombre') + '</button></div>');
+    h += pc('Propuesta póstuma', 'Homenaje a un músico que ya no está: el grupo vota primero el disco y luego la canción.', '<div class="acts"><button class="btn ghost" id="post">✝️ Empezar una propuesta póstuma</button></div>');
+    h += pc('Cumpleaños', 'Quien cumple años propone aparte del turno normal. Aquí está la cola de los que esperan.',
+      '<div class="chips">' + (S.colaCumples.length ? S.colaCumples.map(function (n) { return '<span class="fchip sm">' + esc(n) + ' <button class="x" data-quitar="' + esc(n) + '" aria-label="Quitar a ' + esc(n) + ' de la cola">×</button></span>'; }).join('') : '<span class="muted">La cola está vacía</span>') + '</div>' +
+      ((a.proximosCumples || []).length ? '<p class="why">Próximos cumpleaños: ' + a.proximosCumples.map(function (c) { return esc(c.miembro) + ' (' + (c.dias === 0 ? 'hoy' : 'en ' + c.dias + ' días') + ')'; }).join(', ') + '</p>' : '') +
+      '<label class="f">Añadir a la cola<div class="acts"><select id="cad" class="sel"><option value="">Elige a un miembro…</option>' + opts(S.miembros) + '</select><button class="btn ghost" id="cadb">Añadir a la cola de cumpleaños</button></div></label>');
     box.innerHTML = h;
     var hecho = function (msg) { toast(msg); cargar(true).then(function () { panelTurnos(box); }); };
     $('tsk').onclick = function () { var b = this; confirmar(b, function () { ocupado(b); api('api_skipTurn').then(function () { hecho('Turno saltado'); }).catch(function (e) { toast(errMsg(e)); libre(b); }); }); };
-    $('tnxb').onclick = function () { var n = $('tnx').value; if (!n) return; var b = this; ocupado(b); api('api_setNext', n).then(function () { hecho('Ahora le toca a ' + n); }).catch(function (e) { toast(errMsg(e)); libre(b); }); };
-    $('cadb').onclick = function () { var n = $('cad').value; if (!n) return; var b = this; ocupado(b); api('api_cumpleAdd', n).then(function () { hecho(n + ' está en la cola'); }).catch(function (e) { toast(errMsg(e)); libre(b); }); };
+    $('tnxb').onclick = function () { var n = $('tnx').value; if (!n) { toast('Elige a quién'); return; } var b = this; ocupado(b); api('api_setNext', n).then(function () { hecho('Ahora le toca a ' + n); }).catch(function (e) { toast(errMsg(e)); libre(b); }); };
+    $('cadb').onclick = function () { var n = $('cad').value; if (!n) { toast('Elige a quién'); return; } var b = this; ocupado(b); api('api_cumpleAdd', n).then(function () { hecho(n + ' está en la cola'); }).catch(function (e) { toast(errMsg(e)); libre(b); }); };
     box.querySelectorAll('[data-quitar]').forEach(function (b) { b.onclick = function () { var n = b.getAttribute('data-quitar'); confirmar(b, function () { api('api_cumpleRemove', n).then(function () { hecho(n + ' salió de la cola'); }).catch(function (e) { toast(errMsg(e)); }); }); }; });
     $('pporb').onclick = function () { var n = $('ppor').value; if (!n) { toast('Elige a quién'); return; } abrirProponer('normal', n); };
     $('post').onclick = abrirPostuma;
@@ -1291,14 +1304,13 @@
       var fila = function (m) {
         var tags = [m.rol === 'admin' ? 'admin' : m.rol === 'tecnico' ? 'admin técnico' : '', m.tipo === 'libre' ? 'libre' : '', m.en_pausa === 'SI' ? 'en pausa' : '', m.sin_whatsapp === 'SI' ? 'sin WhatsApp · enlace a ' + m.contacto : '', m.en_rotacion !== 'SI' && m.activo === 'SI' && m.tipo !== 'libre' ? 'fuera de la rotación' : ''].filter(String).map(cap1);
         return '<div class="mrow"><div><b>' + esc(m.nombre) + '</b>' + (m.cumple_dia ? ' <span class="muted" style="font-size:12.5px">🎂 ' + esc(m.cumple_dia) + '/' + esc(m.cumple_mes) + '</span>' : '') +
-          (tags.length ? '<div class="muted" style="font-size:12px">' + esc(tags.join(' · ')) + '</div>' : '') + '</div><div class="row">' +
-          (m.activo === 'SI' ? '<a class="btn small" target="_blank" rel="noopener" href="' + waLink(m.mensaje) + '">Enviar enlace</a><button class="btn small ghost" data-m="' + esc(m.nombre) + '">Más</button>'
-            : '<button class="btn small ghost" data-m="' + esc(m.nombre) + '">Más</button>') + '</div></div>';
+          (tags.length ? '<div class="muted" style="font-size:12px">' + esc(tags.join(' · ')) + '</div>' : '') + '</div><div class="dos">' +
+          (m.activo === 'SI' ? '<a class="btn ghost" target="_blank" rel="noopener" href="' + waLink(m.mensaje) + '">Enviar su enlace</a><button class="btn ghost" data-m="' + esc(m.nombre) + '">Editar</button>'
+            : '<button class="btn ghost" data-m="' + esc(m.nombre) + '">Editar</button>') + '</div></div>';
       };
-      box.innerHTML = '<div class="list">' + act.map(fila).join('') + '</div>' +
-        (ex.length ? '<details class="note"><summary>Ya no están en el grupo · ' + ex.length + '</summary><div class="list">' + ex.map(fila).join('') + '</div></details>' : '') +
-        '<button class="btn ghost" id="madd">Añadir un miembro</button>' +
-        '<div class="muted" style="font-size:12.5px">«Enviar enlace» abre WhatsApp con su enlace personal. Para Pablo el mensaje va a Elkin.</div>';
+      box.innerHTML = pc('Miembros del grupo', '«Enviar su enlace» abre WhatsApp con su enlace personal (el de Pablo va a Elkin). «Editar» cambia sus datos, su pausa o le da un enlace nuevo.', '<div class="list">' + act.map(fila).join('') + '</div>') +
+        (ex.length ? '<details class="pc mini"><summary><h3>Ya no están en el grupo · ' + ex.length + '</h3></summary><div class="list">' + ex.map(fila).join('') + '</div></details>' : '') +
+        pc('Añadir un miembro', 'Se le crea su enlace personal para que entre a la app.', '<div class="acts"><button class="btn" id="madd">Añadir un miembro</button></div>');
       box.querySelectorAll('[data-m]').forEach(function (b) { b.onclick = function () { editarMiembro(ms.filter(function (m) { return m.nombre === b.getAttribute('data-m'); })[0], box); }; });
       $('madd').onclick = function () { editarMiembro(null, box); };
     }).catch(function (e) { box.innerHTML = '<div class="err">' + esc(errMsg(e)) + '</div>'; });
@@ -1339,8 +1351,9 @@
 
   // Datos: editar una ronda (7A), canciones, votos (7B), cancelar o reabrir (7C), registro (7G)
   function panelDatos(box) {
-    box.innerHTML = '<form id="dbf" class="row" style="flex-wrap:nowrap"><input type="text" id="dbn" inputmode="numeric" placeholder="Número de la ronda, por ejemplo 627" style="flex:1"><button class="btn small">Editar</button></form>' +
-      '<span class="k sec-t">Registro de actividad</span><div id="dblog"><div class="spin" style="margin:16px auto"></div></div>';
+    box.innerHTML = pc('Corregir una ronda', 'Cambia la banda, el disco, la ganadora, quién propuso, las canciones o los votos de cualquier ronda. Los cambios quedan en el registro con tu nombre.',
+        '<form id="dbf" class="acts"><input type="text" id="dbn" inputmode="numeric" placeholder="Número de la ronda, por ejemplo 627"><button class="btn">Abrir esa ronda</button></form>') +
+      pc('Registro de actividad', 'Lo último que se ha hecho en la app y quién lo hizo.', '<div id="dblog"><div class="spin" style="margin:16px auto"></div></div>');
     $('dbf').onsubmit = function (e) { e.preventDefault(); var n = $('dbn').value.replace(/\D/g, ''); if (n) editarRonda('#' + n); };
     registro($('dblog'), 0);
   }
@@ -1406,9 +1419,10 @@
 
   // Ajustes (7E, 8F, 9D): mensajes, reglas y valores
   function panelAjustes(box) {
-    box.innerHTML = '<details class="note"><summary><b>Mensajes de WhatsApp</b></summary><div id="ajm" style="margin-top:8px"><div class="spin" style="margin:16px auto"></div></div></details>' +
-      '<details class="note"><summary><b>Texto de las reglas</b></summary><div style="margin-top:8px"><textarea id="ajr" style="min-height:320px">' + esc(S.reglas || '') + '</textarea><button class="btn small" id="ajrgo" style="margin-top:8px">Guardar reglas</button></div></details>' +
-      '<details class="note"><summary><b>Valores de la app</b></summary><div id="ajv" style="margin-top:8px"><div class="spin" style="margin:16px auto"></div></div></details>';
+    var cj = function (titulo, porque, id, cuerpo) { return '<details class="pc mini" data-aj="' + id + '"><summary><h3>' + titulo + '</h3><p class="why">' + porque + '</p></summary><div class="pcb">' + cuerpo + '</div></details>'; };
+    box.innerHTML = cj('Mensajes de WhatsApp', 'Los textos que la app prepara para pegar en el chat (resultados, recordatorios, enlaces). Toca para abrir y cambiarlos.', 'm', '<div id="ajm"><div class="spin" style="margin:16px auto"></div></div>') +
+      cj('Texto de las reglas', 'Lo que ve cada miembro en «Ver las reglas».', 'r', '<textarea id="ajr" style="min-height:320px">' + esc(S.reglas || '') + '</textarea><div class="acts"><button class="btn" id="ajrgo">Guardar las reglas</button></div>') +
+      cj('Valores de la app', 'Cifras y opciones: cuántas propuestas a la vez, días para votar, etc.', 'v', '<div id="ajv"><div class="spin" style="margin:16px auto"></div></div>');
     $('ajrgo').onclick = function () { var b = this; ocupado(b); api('api_setRules', $('ajr').value).then(function (x) { S.reglas = x.reglas; toast('Reglas guardadas'); libre(b); }).catch(function (e) { toast(errMsg(e)); libre(b); }); };
     api('api_mensajes').then(function (ms) {
       $('ajm').innerHTML = ms.map(function (m) {
@@ -1416,7 +1430,7 @@
           '<textarea id="am_' + esc(m.tipo) + '" style="min-height:130px;margin-top:6px">' + esc(m.texto) + '</textarea>' +
           '<div class="muted" style="font-size:12px">Campos: ' + esc((m.campos || []).join(' ')) + '</div>' +
           '<details style="font-size:13px;margin-top:4px"><summary class="muted">Ejemplo</summary><div class="pres" style="font-size:13px">' + esc(m.ejemplo || '') + '</div></details>' +
-          '<div class="row" style="margin-top:6px"><button class="btn small" data-ms="' + esc(m.tipo) + '">Guardar</button>' + (m.cambiado ? '<button class="btn small ghost" data-mr="' + esc(m.tipo) + '">Volver al original</button>' : '') + '</div></div>';
+          '<div class="acts" style="margin-top:6px"><button class="btn" data-ms="' + esc(m.tipo) + '">Guardar este mensaje</button>' + (m.cambiado ? '<button class="btn ghost" data-mr="' + esc(m.tipo) + '">Volver al original</button>' : '') + '</div></div>';
       }).join('');
       $('ajm').onclick = function (e) {
         var b = e.target.closest('button'); if (!b) return;
@@ -1428,7 +1442,7 @@
       $('ajv').innerHTML = as.map(function (a) {
         var inp = a.tipo === 'sino' || a.tipo === 'opcion' ? '<select id="av_' + a.clave + '" class="sel"' + (a.editable ? '' : ' disabled') + '>' + (a.opciones || ['SI', 'NO']).map(function (o) { return '<option' + (o === a.valor ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select>'
           : '<input type="text" id="av_' + a.clave + '" value="' + esc(a.tipo === 'secreto' ? '' : a.tipo === 'fraccion' && a.valor !== '' ? Math.round(Number(a.valor) * 100) + ' %' : a.valor) + '" placeholder="' + esc(a.tipo === 'secreto' ? (a.valor || 'Sin poner') : '') + '"' + (a.editable ? '' : ' disabled') + (a.tipo === 'num' ? ' inputmode="numeric"' : '') + '>';
-        return '<div class="aj"><label class="f">' + esc(a.titulo) + (a.editable ? '' : ' <span class="muted">(solo el admin técnico)</span>') + inp + '</label>' + (a.editable ? '<button class="btn small ghost" data-av="' + a.clave + '">Guardar</button>' : '') + '</div>';
+        return '<div class="aj"><label class="f">' + esc(a.titulo) + (a.editable ? '' : ' <span class="muted">(solo el admin técnico)</span>') + inp + '</label>' + (a.editable ? '<button class="btn ghost" data-av="' + a.clave + '">Guardar este valor</button>' : '') + '</div>';
       }).join('');
       $('ajv').onclick = function (e) {
         var b = e.target.closest('[data-av]'); if (!b) return; var k = b.getAttribute('data-av');
