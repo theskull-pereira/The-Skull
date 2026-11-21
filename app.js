@@ -40,8 +40,8 @@
       '<span class="nb">#' + esc(r.numero || '') + '</span></div>';
   }
   function quien(r) {
-    if (r.tipo === 'cumpleaños') return '🎂 Cumpleaños de ' + r.proponente;
-    if (r.tipo === 'póstuma') return '✝️ En homenaje a ' + (r.homenaje || '…');
+    if (r.tipo === 'cumpleaños') return '🎂 Propuesta de cumpleaños de ' + r.proponente;   // 22-nov (Chiquito): texto completo
+    if (r.tipo === 'póstuma') return '✝️ Propuesta póstuma en homenaje a ' + (r.homenaje || '…');
     return r.proponente ? 'Propuesta de ' + r.proponente : '';
   }
   function origen(r) { return [r.pais, r.anio].filter(Boolean).join(' · '); }
@@ -229,7 +229,7 @@
     var pct = r.total ? Math.round(r.votaron * 100 / r.total) : 0;
     var h = '<button class="card' + (!r.miVoto && r.estado === 'abierta' ? ' mine' : '') + '" data-r="' + esc(r.id) + '">' + cover(r) + '<div class="ci">' +
       '<span class="t1">' + esc(r.banda) + ' · ' + esc(r.disco) + '</span>' +
-      '<span class="m">' + esc([quien(r), origen(r)].filter(Boolean).join(' · ')) + '</span>' +
+      '<span class="m">' + esc([origen(r), quien(r)].filter(Boolean).join(' · ')) + '</span>' +   // 22-nov (Chiquito): primero país y año, después de quién es
       '<div class="meter' + (pct >= 70 ? ' ok' : '') + '"><i style="width:' + pct + '%"></i></div>' +
       '<span class="m">' + r.votaron + ' de ' + r.total + ' votaron</span>' + limite(r);
     var nf = r.faltan ? r.faltan.length : (r.total - r.votaron);
@@ -404,7 +404,7 @@
       var sg;
       if (r.esAdmin) {   // 14-nov: los admins pueden poner, cambiar o quitar el voto de cualquiera, también en propuestas cerradas
         var etq = x.estado === 'voto' ? esc(x.cancion) + ' ✎' : (x.estado === 'sinvoto' ? 'Sin voto · Añadir su voto ›' : x.estado === 'abstencion' ? 'Abstención · Cambiar ›' : (abierta ? 'Falta · Añadir su voto ›' : 'Abstención · Cambiar ›'));
-        sg = '<button type="button" class="sg falta-b' + (x.estado === 'voto' ? ' v' + (r.ganadora && igual(x.cancion, r.ganadora) ? ' w' : '') : ' f') + '" data-falta="' + esc(x.miembro) + '" data-tiene="' + (x.estado === 'voto' || x.estado === 'abstencion' ? '1' : '') + '" data-voto="' + esc(x.estado === 'voto' ? x.cancion : '') + '">' + etq + '</button>';
+        sg = '<button type="button" class="sg falta-b' + (x.estado === 'voto' ? ' v' + (r.ganadora && igual(x.cancion, r.ganadora) ? ' w' : '') : ' f') + '" data-falta="' + esc(x.miembro) + '" data-tiene="' + (x.estado === 'voto' || x.estado === 'abstencion' ? '1' : '') + '" data-voto="' + esc(x.estado === 'voto' ? x.cancion : '') + '" data-com="' + esc(x.comentario || '') + '">' + etq + '</button>';
       }
       else if (x.estado === 'voto') sg = '<span class="sg' + (r.ganadora && igual(x.cancion, r.ganadora) ? ' w' : '') + '">' + esc(x.cancion) + '</span>';
       else if (x.estado === 'sinvoto') sg = '<span class="sg a">Sin voto</span>';
@@ -430,6 +430,7 @@
       var ops = (CUR.canciones || []).map(function (s) { return '<option' + (s.titulo === actual ? ' selected' : '') + '>' + esc(s.titulo) + '</option>'; }).join('');
       fila.insertAdjacentHTML('afterend', '<div class="falta-f"><label>Voto de <b>' + esc(nombre) + '</b>' + (tiene ? '' : ' (dado en el chat)') + '</label>' +
         '<select id="faltaSel"><option value="">Elige la canción…</option>' + ops + '<option value="' + esc(ABST) + '">Se abstiene</option>' + (tiene ? '<option value="__quitar">Quitar su voto (dejarlo sin votar)</option>' : '') + '</select>' +
+        '<label>Comentario (opcional: pégalo del chat)<textarea id="faltaCom" rows="3" placeholder="Lo que escribió al votar">' + esc(b.getAttribute('data-com') || '') + '</textarea></label>' +   // 22-nov (Chiquito)
         '<div class="row"><button type="button" class="btn small" data-faltaok="' + esc(nombre) + '">Guardar voto</button><button type="button" class="btn small ghost" data-faltano="1">Cancelar</button></div></div>');
       return;
     }
@@ -439,7 +440,8 @@
       var can = ($('faltaSel') || {}).value || '', quienV = ok.getAttribute('data-faltaok'), rid = CUR.id;
       if (!can) { toast('Elige la canción'); return; }
       ok.disabled = true; ok.textContent = 'Guardando…';
-      api('api_voteFix', rid, quienV, can === '__quitar' ? '' : can).then(function (x) {
+      var com = (($('faltaCom') || {}).value || '').trim();
+      api('api_voteFix', rid, quienV, can === '__quitar' ? '' : can, { comentario: com }).then(function (x) {
         toast(can === '__quitar' ? 'Voto de ' + quienV + ' quitado' : 'Voto de ' + quienV + ' guardado'); if (x && x.aviso) toast(x.aviso);
         return api('api_round', rid).then(function (r) { RMEM[rid] = r; if (CUR && CUR.id === rid) { CUR = r; dibujarRonda(); } cargar(true); });
       }).catch(function (err) { toast(errMsg(err)); ok.disabled = false; ok.textContent = 'Guardar voto'; });
@@ -1450,15 +1452,16 @@
         sel('ganadora', 'Ganadora', [''].concat(cs.map(function (c) { return c.titulo; }))) +
         sel('proponente', 'Propuso', [''].concat(todos).concat(['Decisión colectiva'])) + sel('tipo', 'Tipo', r.tipos || ['normal', 'cumpleaños', 'póstuma'], capi) + campo('homenaje', 'Homenaje a (póstumas)') +
         '<div class="row">' + campo('numero', 'Número', 'numeric') + campo('rotacion', 'Ronda', 'numeric') + '</div>' + campo('desempate', 'Cómo se decidió (empates)') +
+        '<label class="f">Presentación de la propuesta (pégala del chat)<textarea id="re_presentacion" rows="6" placeholder="Lo que escribió quien propuso el disco">' + esc(r.presentacion || '') + '</textarea></label>' +   // 22-nov (Chiquito)
         '<button class="btn" id="rego">Guardar cambios</button>' +
         '<details class="note"><summary><b>Canciones · ' + cs.length + '</b></summary><div id="recs" style="margin-top:8px">' + cs.map(function (c, i) {
           return '<div class="row cs" style="flex-wrap:nowrap" data-antes="' + esc(c.titulo) + '"><input type="text" value="' + esc(c.titulo) + '" style="flex:1"><span class="muted" style="font-size:12px;align-self:center">' + (c.votos || 0) + '</span><button class="btn small ghost" data-up="' + i + '">↑</button></div>';
         }).join('') + '</div><div class="row" style="flex-wrap:nowrap;margin-top:6px"><input type="text" id="renew" placeholder="Añadir una canción" style="flex:1"><button class="btn small ghost" id="readdc">Añadir</button></div><button class="btn small" id="recsgo" style="margin-top:8px">Guardar canciones</button></details>' +
         '<details class="note"><summary><b>Corregir votos</b></summary><div class="row" style="flex-wrap:nowrap;margin-top:8px"><select id="vfm" class="sel" style="flex:1"><option value="">Miembro…</option>' + todos.map(function (n) { return '<option>' + esc(n) + '</option>'; }).join('') + '</select>' +
-        '<select id="vfc" class="sel" style="flex:1"><option value="">Canción…</option>' + cs.map(function (c) { return '<option>' + esc(c.titulo) + '</option>'; }).join('') + '<option value="(abstención)">Abstención</option><option value="__quitar">Quitar su voto</option></select></div><button class="btn small" id="vfgo" style="margin-top:8px">Guardar voto</button></details>' +
+        '<select id="vfc" class="sel" style="flex:1"><option value="">Canción…</option>' + cs.map(function (c) { return '<option>' + esc(c.titulo) + '</option>'; }).join('') + '<option value="(abstención)">Abstención</option><option value="__quitar">Quitar su voto</option></select></div><label class="f" style="margin-top:8px">Comentario (opcional: pégalo del chat)<textarea id="vfcom" rows="3"></textarea></label><button class="btn small" id="vfgo" style="margin-top:8px">Guardar voto</button></details>' +
         '<div class="row">' + (r.puedeCancelar ? '<button class="btn small ghost" id="recan">Cancelar esta propuesta</button>' : '') + (r.puedeReabrir ? '<button class="btn small ghost" id="reabr">Reabrir la votación</button>' : '') + '</div>';
       abrirHoja(h); $('back').onclick = cerrarHoja;
-      var camposR = ['banda', 'disco', 'anio', 'pais', 'ganadora', 'proponente', 'tipo', 'homenaje', 'numero', 'rotacion', 'desempate'];
+      var camposR = ['banda', 'disco', 'anio', 'pais', 'ganadora', 'proponente', 'tipo', 'homenaje', 'numero', 'rotacion', 'desempate', 'presentacion'];
       $('rego').onclick = function () {
         var b = this, c = {}; camposR.forEach(function (k) { var v = $('re_' + k).value.trim(); if (v !== String(r[k] || '').trim()) c[k] = v; });
         if (!Object.keys(c).length) { toast('No hay cambios'); return; }
@@ -1473,7 +1476,8 @@
       };
       $('vfgo').onclick = function () {
         var b = this, m = $('vfm').value, c = $('vfc').value; if (!m || !c) { toast('Elige miembro y canción'); return; }
-        ocupado(b); api('api_voteFix', ref, m, c === '__quitar' ? '' : c).then(function (x) { toast('Voto guardado'); if (x && x.aviso) toast(x.aviso); editarRonda(ref, x && x.info); }).catch(function (e) { toast(errMsg(e)); libre(b); });
+        var com = ($('vfcom').value || '').trim(), op = com ? { comentario: com } : {};
+        ocupado(b); api('api_voteFix', ref, m, c === '__quitar' ? '' : c, op).then(function (x) { toast('Voto guardado'); if (x && x.aviso) toast(x.aviso); editarRonda(ref, x && x.info); }).catch(function (e) { toast(errMsg(e)); libre(b); });
       };
       var can = $('recan'); if (can) can.onclick = function () { var b = this; confirmar(b, function () { ocupado(b); api('api_roundCancel', ref, '').then(function (x) { toast('Propuesta cancelada'); cerrarHoja(); cargar(true); }).catch(function (e) { toast(errMsg(e)); libre(b); }); }); };
       var reo = $('reabr'); if (reo) reo.onclick = function () { var b = this; confirmar(b, function () { ocupado(b); api('api_roundReopen', ref).then(function () { toast('Reabierta'); cerrarHoja(); cargar(true); }).catch(function (e) { toast(errMsg(e)); libre(b); }); }); };
