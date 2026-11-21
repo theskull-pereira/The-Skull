@@ -884,7 +884,7 @@
         return '<button class="fchip sm' + (H.filtro === c[0] ? ' on' : '') + '" data-f="' + c[0] + '">' + c[1] + '</button>';
       }).join('') + '<select id="fdec" class="fsel"><option value="">Década</option>' + f.decadas.map(function (d) { return '<option value="' + d.decada + '"' + (H.filtro === 'decada' && H.valor == d.decada ? ' selected' : '') + '>' + esc(d.etiqueta) + ' · ' + d.rondas + '</option>'; }).join('') + '</select>' +
         '<select id="fmie" class="fsel"><option value="">Miembro</option>' + f.miembros.map(function (m) { return '<option' + (H.filtro === 'miembro' && H.valor === m.nombre ? ' selected' : '') + '>' + esc(m.nombre) + '</option>'; }).join('') + '</select>' +
-        (f.rondas && f.rondas.length ? '<select id="fron" class="fsel"><option value="">Ronda</option>' + f.rondas.map(function (x) { return '<option value="' + x.ronda + '"' + (H.filtro === 'ronda' && String(H.valor) === String(x.ronda) ? ' selected' : '') + '>' + esc(x.etiqueta) + (x.desde ? ' · desde #' + x.desde : '') + '</option>'; }).join('') + '</select>' : '') + '</div>';   // 21-nov: buscar por Ronda (Chiquito)
+        (f.rondas && f.rondas.length ? '<select id="fron" class="fsel"><option value="">Ronda</option>' + f.rondas.map(function (x) { return '<option value="' + x.ronda + '"' + (H.filtro === 'ronda' && String(H.valor) === String(x.ronda) ? ' selected' : '') + '>' + esc(x.etiqueta) + '</option>'; }).join('') + '</select>' : '') + '</div>';   // 21-nov: buscar por Ronda (Chiquito)
     }
     v.innerHTML = '<div class="pagehead"><h2>Historial</h2>' + (H.total && !H.playlist ? '<span class="k">' + H.total + ' rondas</span>' : '') + '</div>' +
       (H.playlist ? '' : '<form id="hs" class="hsf"><input type="search" id="hq" placeholder="Buscar: #627, ronda XLIII, banda, disco, canción, miembro, año" value="' + esc(H.q) + '" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">' +
@@ -892,16 +892,22 @@
       '<div class="chips">' + chips + '</div>' + filtros +
       (H.filtro === 'estilo' && !H.playlist ? '<div class="note filtro-est">Estilo: <b>' + esc(H.valor) + '</b><button class="btn small ghost" id="festx">Quitar filtro ✕</button><button class="btn small ghost" id="festn">‹ Volver a Números</button></div>' : '') + '<div id="hl"><div class="spin"></div></div>';
     v.querySelectorAll('[data-v]').forEach(function (b) { b.onclick = function () { var x = b.getAttribute('data-v'); if (x === 'playlist') { H.playlist = true; } else { H.playlist = false; H.vista = x; } cargarHist(); }; });
-    v.querySelectorAll('[data-f]').forEach(function (b) { b.onclick = function () { H.filtro = b.getAttribute('data-f'); H.valor = ''; cargarHist(); }; });
-    var fd = $('fdec'); if (fd) fd.onchange = function () { H.filtro = fd.value ? 'decada' : ''; H.valor = fd.value; cargarHist(); };
-    var fm = $('fmie'); if (fm) fm.onchange = function () { H.filtro = fm.value ? 'miembro' : ''; H.valor = fm.value; cargarHist(); };
-    var fr = $('fron'); if (fr) fr.onchange = function () { H.filtro = fr.value ? 'ronda' : ''; H.valor = fr.value; cargarHist(); };
+    // 21-nov (Carlos): elegir un filtro borra la búsqueda escrita, para no quedarse atrapado en la combinación de las dos
+    v.querySelectorAll('[data-f]').forEach(function (b) { b.onclick = function () { H.filtro = b.getAttribute('data-f'); H.valor = ''; H.q = ''; cargarHist(); }; });
+    var fd = $('fdec'); if (fd) fd.onchange = function () { H.filtro = fd.value ? 'decada' : ''; H.valor = fd.value; H.q = ''; cargarHist(); };
+    var fm = $('fmie'); if (fm) fm.onchange = function () { H.filtro = fm.value ? 'miembro' : ''; H.valor = fm.value; H.q = ''; cargarHist(); };
+    var fr = $('fron'); if (fr) fr.onchange = function () { H.filtro = fr.value ? 'ronda' : ''; H.valor = fr.value; H.q = ''; cargarHist(); };
     var fx = $('festx'); if (fx) fx.onclick = function () { H.filtro = ''; H.valor = ''; cargarHist(); };
     var fn = $('festn'); if (fn) fn.onclick = function () { H.filtro = ''; H.valor = ''; TAB = 'numeros'; $('tabs').querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-tab') === 'numeros'); }); render(); };
     // Búsqueda (14-nov): busca sola mientras se escribe, y al borrar el texto vuelve la lista completa.
     // Antes solo cambiaba al pulsar «Buscar» en el teclado: si se borraba el texto, la búsqueda vieja seguía puesta.
     var hs = $('hs'), hq = $('hq'), hqx = $('hqx');
-    var buscaYa = function (v) { v = String(v || '').trim(); if (hqx) hqx.hidden = !v; if (v === H.q) return; H.q = v; cargarHist(false, true); };
+    var buscaYa = function (v) {
+      v = String(v || '').trim(); if (hqx) hqx.hidden = !v; if (v === H.q) return; H.q = v;
+      // 21-nov (Carlos): escribir una búsqueda busca en TODO el historial; si había un filtro puesto (Cumpleaños, Década…), se quita
+      if (v && H.filtro) { H.filtro = ''; H.valor = ''; quitarFiltrosVisibles(); }
+      cargarHist(false, true);
+    };
     if (hs) hs.onsubmit = function (e) { e.preventDefault(); clearTimeout(vistaHistorial.t); buscaYa(hq.value); hq.blur(); };
     if (hq) hq.oninput = hq.onsearch = function () {
       clearTimeout(vistaHistorial.t); var v = hq.value.trim();
@@ -913,6 +919,12 @@
     v.onclick = function (e) { var t = e.target.closest('[data-r]'); if (t) abrirRonda(t.getAttribute('data-r')); };
   }
   var HSEQ = 0;   // cada pedido lleva su número: una respuesta vieja que llega tarde no pisa a la nueva
+  /** Pone «Todas» encendido y los desplegables en blanco sin redibujar la pantalla (el teclado no se cierra). */
+  function quitarFiltrosVisibles() {
+    document.querySelectorAll('#view [data-f]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-f') === ''); });
+    ['fdec', 'fmie', 'fron'].forEach(function (id) { var x = $(id); if (x) x.value = ''; });
+    var fe = document.querySelector('#view .filtro-est'); if (fe) fe.remove();
+  }
   function cargarHist(mas, soloLista) {
     if (!mas) {
       H.items = [];
@@ -938,7 +950,7 @@
   }
   function pintarHist(antes) {
     var box = $('hl'); if (!box) return;
-    if (!H.items.length) { box.innerHTML = '<div class="note">No encontré nada' + (H.q ? ' con «' + esc(H.q) + '»' : '') + '.</div>'; return; }
+    if (!H.items.length) { box.innerHTML = '<div class="note">No encontré nada' + (H.q ? ' con «' + esc(H.q) + '»' : '') + (H.filtro ? ' con el filtro puesto. Toca «Todas» para quitarlo' : '') + '.</div>'; return; }
     if (!antes) box.innerHTML = '<div class="list" id="hll"></div>';
     var mas = $('hmas'); if (mas) mas.remove();
     $('hll').insertAdjacentHTML('beforeend', H.items.slice(antes).map(filaHist).join(''));
