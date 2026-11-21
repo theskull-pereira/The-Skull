@@ -427,3 +427,58 @@ details.mini:not(.pc) > summary{color:var(--dust);font-size:13.5px;cursor:pointe
 .turno .t2.adm{color:var(--gold)}
 /* 17-nov (Carlos): en Números, los títulos de grupo («Los que votan», «Los que llegan tarde»…) más grandes y visibles */
 .k.sec-t.grp{font-family:var(--f-head);font-weight:800;font-size:22px;letter-spacing:.04em;color:var(--blood);margin:26px 0 10px;padding-bottom:8px;border-bottom:2px solid var(--blood);line-height:1.1}
+
+/* ===================== 21-nov · Nuevo aspecto (aprobado por Carlos) =====================
+   Escenas hechas con Gemini (mesa con humo violeta, archivo, fanzine, chaleco) + el «SKULL» violeta de Milena.
+   Violeta para el ambiente; el rojo sangre queda solo para las acciones (lo que se toca). */
+:root{--glow:#9B5CFF;--glow-line:rgba(155,92,255,.28);--ink:#0B0A0E}
+html,body{background:#0B0A0E}
+body{background:radial-gradient(120% 60% at 50% -10%,rgba(110,50,190,.28),transparent 60%),radial-gradient(80% 40% at 100% 60%,rgba(90,30,150,.10),transparent 70%),#0B0A0E;background-attachment:fixed}
+.hero{aspect-ratio:1376/600;background:#0B0A0E url(img/v2/cabecera_v2.jpg) center/cover no-repeat}
+.hero::after{height:45%;background:linear-gradient(transparent,#0B0A0E)}
+.hero::before{left:auto;right:12px;top:auto;bottom:10px;opacity:.6}
+body[data-tab="historial"] .pagehead,body[data-tab="numeros"] .pagehead,body[data-tab="panel"] .pagehead{margin:0 -16px;padding:calc(18px + env(safe-area-inset-top,0px)) 18px 16px;min-height:150px;align-items:flex-end;
+  background:linear-gradient(180deg,rgba(11,10,14,0) 30%,#0B0A0E 100%),linear-gradient(90deg,rgba(11,10,14,.15),rgba(11,10,14,.7)),var(--ph) center/cover no-repeat}
+body[data-tab="historial"] .pagehead,body[data-tab="panel"] .pagehead{--ph:url(img/v2/ph_historial.jpg)}
+body[data-tab="numeros"] .pagehead{--ph:url(img/v2/ph_numeros.jpg)}
+.pagehead h2{font-family:var(--f-mark);font-weight:400;text-transform:none;letter-spacing:.01em;font-size:44px;text-shadow:0 0 18px rgba(155,92,255,.55),0 2px 4px #000}
+.pagehead .k{color:#CBB6F5}
+.hello{font-family:var(--f-mark);font-weight:400;text-transform:none;letter-spacing:.01em;font-size:34px;text-shadow:0 0 16px rgba(155,92,255,.5)}
+h2{font-family:var(--f-mark);font-weight:400;text-transform:none;font-size:30px}
+.card{background:linear-gradient(160deg,#1C1723,#131016);border-color:var(--glow-line);box-shadow:0 0 0 1px rgba(0,0,0,.4),0 8px 22px rgba(0,0,0,.35)}
+.card.mine{border-color:var(--blood);box-shadow:0 0 0 1px rgba(179,41,30,.35),0 0 22px rgba(179,41,30,.25)}
+.cover{border-color:var(--glow-line);box-shadow:0 0 12px rgba(155,92,255,.18)}
+.meter i{background:linear-gradient(90deg,#5E35B1,var(--glow))}
+.k{color:#B9A6DD}
+.k.sec-t{color:#CBB6F5;text-shadow:0 0 10px rgba(155,92,255,.4)}
+nav.tabs{background:rgba(11,10,14,.92);border-top-color:var(--glow-line);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+nav.tabs button.on{color:#fff} nav.tabs button.on i{background:var(--glow);box-shadow:0 0 10px var(--glow)}
+nav.tabs button.on svg{filter:drop-shadow(0 0 6px rgba(155,92,255,.8))}
+.btn{box-shadow:0 0 18px rgba(179,41,30,.35)}
+.btn.ghost{box-shadow:none}
+.chip.go{box-shadow:0 0 10px rgba(179,41,30,.5)}
+/* Tamaños para el dedo (revisión 21-nov, U1–U3) */
+.sheet .back,.ytbar .back{min-height:44px;padding:10px 16px 10px 0;font-size:17px;color:var(--bone)}
+.fchip,.fchip.sm,.fsel{min-height:40px}
+.k{font-size:12px}
+.chip{font-size:12px}
+/* YouTube dentro de la app (21-nov) */
+.ytov{position:fixed;inset:0;z-index:50;background:#0B0A0E;display:flex;flex-direction:column;padding:calc(6px + env(safe-area-inset-top,0px)) 14px calc(14px + env(safe-area-inset-bottom,0px))}
+.ytbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ytbar .back{background:none;border:0;cursor:pointer}
+.ytout{font-size:14px;color:#CBB6F5}
+.ytfr{position:relative;width:100%;aspect-ratio:16/9;margin-top:10px;border-radius:12px;overflow:hidden;border:1px solid var(--glow-line);box-shadow:0 0 24px rgba(155,92,255,.25)}
+.ytfr iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.ytnota{font-size:13px;margin-top:10px}
+nav.tabs button.on .ico{color:#CBB6F5}
+.pagehead h2,.hello{color:#F4EEFF;-webkit-text-fill-color:#F4EEFF;background:none}
+.badge.vidente{background:linear-gradient(135deg,#5E35B1,#9B5CFF);color:#fff;box-shadow:0 0 14px rgba(155,92,255,.6);margin-top:6px}
+/* Parches (21-nov) */
+.parche{display:block;border-radius:50%;filter:drop-shadow(0 3px 6px rgba(0,0,0,.7)) drop-shadow(0 0 8px rgba(155,92,255,.25))}
+.titrow{display:flex;gap:12px;align-items:center;margin-top:4px}
+.titrow .badge{margin-top:0}
+.yo-p{width:84px;height:84px;flex:0 0 84px;transform:rotate(-6deg)}
+.titrow + .titrow .yo-p{transform:rotate(5deg)}
+.rk-h{position:relative}
+.rk-p{position:absolute;right:-6px;top:-10px;width:64px;height:64px;margin:0;transform:rotate(6deg)}
+.rk-h:has(.rk-p){padding-right:70px;min-height:56px}

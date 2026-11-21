@@ -202,6 +202,7 @@
   }
   function render() {
     if (!S) return;
+    document.body.setAttribute('data-tab', TAB);   // 21-nov: cada pantalla con su imagen (nuevo aspecto)
     var v = $('view');
     if (TAB === 'inicio') { v.innerHTML = vistaInicio(); enlazarInicio(); }
     else if (TAB === 'historial') { v.onclick = null; cargarHist(); }
@@ -296,6 +297,45 @@
     };
     delCuaderno();
   }
+  /** 21-nov (Chiquito): Metal Archives directo al disco (búsqueda por banda y título); sin disco, la banda. */
+  function maEnlace(r) {
+    if (!r.disco) return 'https://www.metal-archives.com/search?searchString=' + encodeURIComponent(r.banda) + '&type=band_name';
+    return 'https://www.metal-archives.com/search/advanced/searching/albums?bandName=' + encodeURIComponent(r.banda) + '&releaseTitle=' + encodeURIComponent(r.disco);
+  }
+  /** 21-nov: YouTube dentro de la app (en el iPhone, el enlace abría YouTube y no había forma de volver). '' si no se puede incrustar. */
+  function ytEmbed(u) {
+    var x; try { x = new URL(u); } catch (e) { return ''; }
+    var h = x.hostname.replace(/^(www|m|music)\./, '');
+    if (h !== 'youtube.com' && h !== 'youtu.be') return '';
+    var list = x.searchParams.get('list') || '', v = x.searchParams.get('v') || (h === 'youtu.be' ? x.pathname.slice(1) : '');
+    if (/^\/shorts\//.test(x.pathname)) v = x.pathname.split('/')[2] || '';
+    var p = 'playsinline=1&rel=0&modestbranding=1';
+    if (v) return 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(v) + '?' + p + (list ? '&list=' + encodeURIComponent(list) : '');
+    if (list) return 'https://www.youtube-nocookie.com/embed/videoseries?list=' + encodeURIComponent(list) + '&' + p;
+    return '';
+  }
+  function abrirYoutube(url, emb) {
+    var o = document.getElementById('ytov');
+    if (!o) { o = document.createElement('div'); o.id = 'ytov'; o.className = 'ytov'; document.body.appendChild(o); }
+    o.innerHTML = '<div class="ytbar"><button type="button" class="back" id="ytx">‹ Volver a The Skull</button><a class="ytout" target="_blank" rel="noopener" href="' + esc(url) + '">Abrir en YouTube ›</a></div>' +
+      '<div class="ytfr"><iframe src="' + esc(emb) + '" title="YouTube" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>' +
+      '<p class="muted ytnota">Si el video no se puede ver aquí, toca «Abrir en YouTube».</p>';
+    o.hidden = false; document.documentElement.style.overflow = 'hidden';
+    document.getElementById('ytx').onclick = function () { o.hidden = true; o.innerHTML = ''; document.documentElement.style.overflow = ''; };
+  }
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[href]'); if (!a || a.classList.contains('ytout')) return;
+    var emb = ytEmbed(a.getAttribute('href')); if (!emb) return;
+    e.preventDefault(); e.stopPropagation(); abrirYoutube(a.getAttribute('href'), emb);
+  }, true);
+  /** 21-nov (Carlos): parches de chaleco metalero para los títulos y las categorías de Números. */
+  var PARCHES = { 'el que llega cuando ya se fueron todos': 'tardios', 'el apagaluces': 'apagaluces', 'la tortuga': 'tortuga', 'el oraculo': 'oraculo', 'ojo de ganador': 'oraculo',
+    'el lobo solitario': 'lobo', 'lobo solitario': 'lobo', 'el fiel': 'fiel', 'participacion': 'fiel', 'el profeta': 'profeta', 'el que une': 'une',
+    'el arqueologo': 'arqueologo', 'el moderno': 'moderno', 'el explorador': 'explorador', 'el vidente': 'vidente' };
+  function parche(titulo, cls) {
+    var k = String(titulo || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim(), f = PARCHES[k];
+    return f ? '<img class="parche ' + (cls || '') + '" src="img/parches/parche_' + f + '.webp" alt="" loading="lazy">' : '';
+  }
   function romano(n) {
     n = parseInt(n, 10); if (!(n > 0 && n < 4000)) return String(n || '');
     var v = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1], s = ['M', 'CM', 'D', 'CD', 'C', 'XC', 'L', 'XL', 'X', 'IX', 'V', 'IV', 'I'], o = '';
@@ -342,7 +382,7 @@
     var arr;
     if (r.canciones && r.canciones.some(function (s) { return s.votos > 0; })) arr = r.canciones.map(function (s) { return { titulo: s.titulo, votos: s.votos || 0 }; });
     else { var c = {}; (r.votos || []).forEach(function (v) { if (v.cancion && v.cancion !== ABST) c[v.cancion] = (c[v.cancion] || 0) + 1; }); arr = Object.keys(c).map(function (k) { return { titulo: k, votos: c[k] }; }); }
-    return arr.filter(function (s) { return s.votos > 0; }).sort(function (a, b) { return b.votos - a.votos; });
+    return arr.filter(function (s) { return s.votos > 0; }).sort(function (a, b) { return b.votos - a.votos || String(a.titulo).localeCompare(String(b.titulo), 'es', { sensitivity: 'base' }); });   // 21-nov: empates en orden alfabético (Chiquito)
   }
   function barras(r, arr) {
     if (!arr.length) return '';
@@ -436,7 +476,7 @@
     // Enlaces (14-nov): YouTube Music va directo a la lista del disco o no sale; Spotify, directo o la búsqueda solo de álbumes
     h += '<div class="row">' + (r.spotify ? '<a class="btn ghost" target="_blank" rel="noopener" href="' + esc(r.spotify) + '">Spotify ›</a>' : '<a class="btn ghost" target="_blank" rel="noopener" href="https://open.spotify.com/search/' + q + '">Spotify ›</a>') +
       '<a class="btn ghost" target="_blank" rel="noopener" href="' + (r.youtube ? esc(r.youtube) : 'https://music.youtube.com/search?q=' + q) + '">YouTube Music ›</a>' +   // siempre está: directo al disco si hay enlace, y si no, la búsqueda (como antes)
-      '<a class="btn ghost" target="_blank" rel="noopener" href="https://www.metal-archives.com/search?searchString=' + encodeURIComponent(r.banda) + '&type=band_name">Metal Archives ›</a></div>';
+      '<a class="btn ghost" target="_blank" rel="noopener" href="' + maEnlace(r) + '">Metal Archives ›</a></div>';
     if (r.esAdmin) h += '<button type="button" class="btn ghost adm-ed" id="admEd">✏️ Editar o cancelar esta propuesta (admins)</button>';
     if (r.presentacion) h += '<details class="note"><summary><b>Presentación de ' + esc(r.proponente) + '</b></summary><div class="pres" style="margin-top:8px">' + esc(r.presentacion) + '</div></details>';
     if (r.edicion) h += '<div class="note">Edición: ' + esc(r.edicion) + '</div>';
@@ -843,10 +883,11 @@
       filtros = '<div class="chips">' + [['', 'Todas'], ['cumpleaños', '🎂 Cumpleaños · ' + f.cumpleanos], ['póstuma', '✝️ Póstumas · ' + f.postumas], ['abiertas', 'Abiertas']].map(function (c) {
         return '<button class="fchip sm' + (H.filtro === c[0] ? ' on' : '') + '" data-f="' + c[0] + '">' + c[1] + '</button>';
       }).join('') + '<select id="fdec" class="fsel"><option value="">Década</option>' + f.decadas.map(function (d) { return '<option value="' + d.decada + '"' + (H.filtro === 'decada' && H.valor == d.decada ? ' selected' : '') + '>' + esc(d.etiqueta) + ' · ' + d.rondas + '</option>'; }).join('') + '</select>' +
-        '<select id="fmie" class="fsel"><option value="">Miembro</option>' + f.miembros.map(function (m) { return '<option' + (H.filtro === 'miembro' && H.valor === m.nombre ? ' selected' : '') + '>' + esc(m.nombre) + '</option>'; }).join('') + '</select></div>';
+        '<select id="fmie" class="fsel"><option value="">Miembro</option>' + f.miembros.map(function (m) { return '<option' + (H.filtro === 'miembro' && H.valor === m.nombre ? ' selected' : '') + '>' + esc(m.nombre) + '</option>'; }).join('') + '</select>' +
+        (f.rondas && f.rondas.length ? '<select id="fron" class="fsel"><option value="">Ronda</option>' + f.rondas.map(function (x) { return '<option value="' + x.ronda + '"' + (H.filtro === 'ronda' && String(H.valor) === String(x.ronda) ? ' selected' : '') + '>' + esc(x.etiqueta) + (x.desde ? ' · desde #' + x.desde : '') + '</option>'; }).join('') + '</select>' : '') + '</div>';   // 21-nov: buscar por Ronda (Chiquito)
     }
     v.innerHTML = '<div class="pagehead"><h2>Historial</h2>' + (H.total && !H.playlist ? '<span class="k">' + H.total + ' rondas</span>' : '') + '</div>' +
-      (H.playlist ? '' : '<form id="hs" class="hsf"><input type="search" id="hq" placeholder="Buscar: #627, banda, disco, canción, miembro, año" value="' + esc(H.q) + '" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">' +
+      (H.playlist ? '' : '<form id="hs" class="hsf"><input type="search" id="hq" placeholder="Buscar: #627, ronda XLIII, banda, disco, canción, miembro, año" value="' + esc(H.q) + '" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">' +
         '<button type="button" class="btn small ghost" id="hqx"' + (H.q ? '' : ' hidden') + '>✕ Borrar</button></form>') +
       '<div class="chips">' + chips + '</div>' + filtros +
       (H.filtro === 'estilo' && !H.playlist ? '<div class="note filtro-est">Estilo: <b>' + esc(H.valor) + '</b><button class="btn small ghost" id="festx">Quitar filtro ✕</button><button class="btn small ghost" id="festn">‹ Volver a Números</button></div>' : '') + '<div id="hl"><div class="spin"></div></div>';
@@ -854,6 +895,7 @@
     v.querySelectorAll('[data-f]').forEach(function (b) { b.onclick = function () { H.filtro = b.getAttribute('data-f'); H.valor = ''; cargarHist(); }; });
     var fd = $('fdec'); if (fd) fd.onchange = function () { H.filtro = fd.value ? 'decada' : ''; H.valor = fd.value; cargarHist(); };
     var fm = $('fmie'); if (fm) fm.onchange = function () { H.filtro = fm.value ? 'miembro' : ''; H.valor = fm.value; cargarHist(); };
+    var fr = $('fron'); if (fr) fr.onchange = function () { H.filtro = fr.value ? 'ronda' : ''; H.valor = fr.value; cargarHist(); };
     var fx = $('festx'); if (fx) fx.onclick = function () { H.filtro = ''; H.valor = ''; cargarHist(); };
     var fn = $('festn'); if (fn) fn.onclick = function () { H.filtro = ''; H.valor = ''; TAB = 'numeros'; $('tabs').querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-tab') === 'numeros'); }); render(); };
     // Búsqueda (14-nov): busca sola mientras se escribe, y al borrar el texto vuelve la lista completa.
@@ -944,7 +986,7 @@
     if (!lista || !lista.length) return '';
     var fila = function (x, i) { return '<div class="rk"><span class="pos">' + (i + 1) + '</span><span class="nm">' + esc(x.nombre || (x.a + ' & ' + x.b)) + (x.pocos ? ' <span class="muted" style="font-size:12px">(' + x.votos + (x.votos === 1 ? ' voto' : ' votos') + ')</span>' : '') + '</span><span class="v">' + valor(x) + '</span></div>' + (extra ? extra(x, i) : ''); };
     var mas = todos && todos.length > lista.length ? botonMas(txtMas || 'Mostrar todos (' + todos.length + ')', todos.map(fila).join('')) : '';
-    return '<div class="rank"><div class="rk-h"><b>' + titulo + '</b><span class="muted">' + que + '</span></div><div class="rk-top">' + lista.map(fila).join('') + '</div>' + mas + '</div>';
+    return '<div class="rank"><div class="rk-h">' + parche(titulo, 'rk-p') + '<b>' + titulo + '</b><span class="muted">' + que + '</span></div><div class="rk-top">' + lista.map(fila).join('') + '</div>' + mas + '</div>';
   }
   /** Récords con lista de rondas: los primeros y «Mostrar más». */
   function rankingRondas(titulo, que, lista, todas, derecha) {
@@ -1059,7 +1101,8 @@
       var h = '<div class="hero"><span class="who">' + esc(me.nombre) + '</span></div>';
       // 6A · Tu perfil Skull
       h += '<div class="perfil"><span class="k" style="color:var(--gold)">Tu perfil Skull</span><div class="ptit">' + esc(me.nombre) + '</div>' +
-        (p.titulo ? '<div class="badge">' + esc(p.titulo.titulo) + '</div><div class="muted" style="font-size:13.5px">' + esc(p.titulo.porque) + '</div>' : '') +
+        (p.titulo ? '<div class="titrow">' + parche(p.titulo.titulo, 'yo-p') + '<div><div class="badge">' + esc(p.titulo.titulo) + '</div><div class="muted" style="font-size:13.5px">' + esc(p.titulo.porque) + '</div></div></div>' : '') +
+        (p.especial ? '<div class="titrow">' + parche(p.especial.titulo, 'yo-p') + '<div><div class="badge vidente">' + esc(p.especial.titulo) + '</div><div class="muted" style="font-size:13.5px">' + esc(p.especial.porque) + '</div></div></div>' : '') +   // 21-nov: campaña CRÁNEO
         '<div class="tiles" style="margin-top:12px">' +
         (m.rondas ? '<div class="tile"><b>' + pct(m.participacion) + '</b><span class="muted">' + (m.desde ? 'votaste en ' + m.votos + ' de ' + miles(m.rondas) + ' rondas desde la #' + esc(m.desde) : 'participación · ' + m.votos + ' de ' + miles(m.rondas)) + '</span></div>' : '') +
         (m.votos ? '<div class="tile"><b>' + pct(m.ojo) + '</b><span class="muted">ojo de ganador</span></div>' : '') +
