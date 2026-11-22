@@ -1394,16 +1394,42 @@
   }
   // Póstuma: a quién se homenajea + discos candidatos (de la discografía) → el grupo vota el disco
   var PO = null;
+  /** 22-nov (backlog 9): ficha de un álbum dentro de la póstuma, con «Añadir como candidato». */
+  function verAlbumPostuma(d, x, volverLista) {
+    var box = $('pol'); box.innerHTML = '<div class="spin" style="margin:16px auto"></div>';
+    var yaEs = function () { return PO.candidatos.some(function (c) { return c.disco === x.titulo && c.banda === d.artista.nombre; }); };
+    var pinta = function (e) {
+      e = e || {};
+      var img = e.portada || x.imagen || '', can = e.canciones || [];
+      box.innerHTML = '<div class="note po-al">' + (img ? '<img class="po-img" src="' + esc(img) + '" alt="">' : '') +
+        '<div class="ci"><span class="b">' + esc(d.artista.nombre) + '</span><span class="t" style="font-family:var(--f-head);font-weight:800;font-size:22px;text-transform:uppercase;line-height:1.05">' + esc(e.disco || x.titulo) + '</span>' +
+        '<span class="m">' + esc([d.artista.pais, e.anio || x.anio].filter(Boolean).join(' · ')) + '</span></div>' +
+        (e.descripcion ? '<div class="muted" style="font-size:13px;margin-top:6px"><b>Edición:</b> ' + esc(e.descripcion) + '</div>' : '') +
+        (e.avisos || []).map(function (a) { return '<div class="warn"><span>' + esc(a) + '</span></div>'; }).join('') +
+        (can.length ? '<span class="k sec-t">Canciones · ' + can.length + '</span><div class="list">' + can.map(function (c, i) { return '<div class="track" style="cursor:default"><span class="n">' + esc(c.pos || i + 1) + '</span><span>' + esc(c.titulo) + '</span><span class="c">' + esc(c.duracion || '') + '</span></div>'; }).join('') + '</div>' : '<div class="muted" style="margin-top:6px">No encontré la lista de canciones de este álbum.</div>') +
+        '<div class="row" style="margin-top:10px"><button class="btn small" id="poadd"' + (yaEs() ? ' disabled' : '') + '>' + (yaEs() ? '✓ Ya es candidato' : 'Añadir como candidato') + '</button><button class="btn small ghost" id="povol">‹ Volver a los álbumes</button></div></div>';
+      $('povol').onclick = volverLista;
+      $('poadd').onclick = function () {
+        if (!yaEs()) PO.candidatos.push({ banda: d.artista.nombre, disco: x.titulo, anio: x.anio, mbid: x.mbid || '', id: x.id, codigo: d.artista.codigo || '' });
+        PO.pintar(); toast('Añadido'); volverLista();
+      };
+    };
+    api('api_edicion', x.id, d.artista.codigo || '', {}).then(pinta).catch(function () { pinta({}); });
+  }
   function abrirPostuma() {
     PO = { homenaje: '', candidatos: [] };
     var h = '<div class="top"><button class="back" id="back">‹ Cancelar</button><span class="k" style="margin-left:auto">Propuesta póstuma</span></div><h2>✝️ Póstuma</h2>' +
       '<label class="f">¿A quién se le hace el homenaje?<input type="text" id="poh" placeholder="Nombre del músico"></label>' +
       '<div class="note">Busca su banda y toca los álbumes que el grupo podrá elegir. Después todos votan el álbum, y luego la canción.</div>' +
       '<form id="pof" class="row" style="flex-wrap:nowrap"><input type="text" id="poq" placeholder="Banda" style="flex:1"><button class="btn small">Buscar</button></form><div id="pol"></div>' +
-      '<span class="k sec-t">Álbumes candidatos</span><div id="poc" class="chips"><span class="muted">Ninguno todavía</span></div><button class="btn" id="pogo">Empezar la póstuma</button>';
+      '<span class="k sec-t">Álbumes candidatos</span><div id="poc" class="chips"><span class="muted">Ninguno todavía</span></div>' +
+      '<div class="note pasara"><b>Al tocar «Empezar la póstuma» pasa esto:</b><ol><li>Se abre en la app la votación del <b>álbum</b> entre los candidatos.</li>' +
+      '<li>Te mostramos el <b>mensaje listo</b> para el grupo de WhatsApp.</li><li>Cuando el grupo elige el álbum, se vota la <b>canción</b> como en cualquier propuesta.</li></ol>' +
+      '<span class="muted">Se puede corregir o cancelar después desde el editor.</span></div><button class="btn" id="pogo">Empezar la póstuma</button>';
     abrirHoja(h); $('back').onclick = cerrarHoja;
     var pinta = function () { $('poc').innerHTML = PO.candidatos.length ? PO.candidatos.map(function (c, i) { return '<span class="fchip sm on">' + esc(c.banda + ' – ' + c.disco) + ' <button class="x" data-q="' + i + '">×</button></span>'; }).join('') : '<span class="muted">Ninguno todavía</span>';
       $('poc').querySelectorAll('[data-q]').forEach(function (b) { b.onclick = function () { PO.candidatos.splice(Number(b.getAttribute('data-q')), 1); pinta(); }; }); };
+    PO.pintar = pinta;
     $('pof').onsubmit = function (e) {
       e.preventDefault(); var q = $('poq').value.trim(); if (q.length < 2) return;
       $('pol').innerHTML = '<div class="spin" style="margin:16px auto"></div>';
@@ -1413,10 +1439,12 @@
           $('pol').innerHTML = '<div class="spin" style="margin:16px auto"></div>';
           api('api_discografia', b.getAttribute('data-b')).then(function (d) {
             var ds = d.discos.filter(function (x) { return x.valido; });
-            $('pol').innerHTML = '<div class="list">' + ds.map(function (x, i) { return '<button class="pick" data-i="' + i + '"' + (x.ya ? ' disabled' : '') + '>' + (x.imagen ? '<img class="th" src="' + esc(x.imagen) + '">' : '<span class="th"></span>') + '<span class="a"><b>' + esc(x.titulo) + '</b><span>' + esc(x.anio) + (x.ya ? ' · ' + esc(x.ya.texto) : '') + '</span></span></button>'; }).join('') + '</div>';
-            $('pol').querySelectorAll('[data-i]').forEach(function (bb) { bb.onclick = function () { var x = ds[Number(bb.getAttribute('data-i'))];
-              if (!PO.candidatos.some(function (c) { return c.disco === x.titulo && c.banda === d.artista.nombre; })) PO.candidatos.push({ banda: d.artista.nombre, disco: x.titulo, anio: x.anio, mbid: x.mbid || '', id: x.id, codigo: d.artista.codigo || '' });
-              pinta(); toast('Añadido'); }; });
+            // 22-nov (backlog 9): tocar un álbum lo abre (portada, edición, canciones) y desde ahí se añade como candidato
+            var lista = function () {
+              $('pol').innerHTML = '<div class="list">' + ds.map(function (x, i) { var ya = PO.candidatos.some(function (c) { return c.disco === x.titulo && c.banda === d.artista.nombre; }); return '<button class="pick" data-i="' + i + '"' + (x.ya ? ' disabled' : '') + '>' + (x.imagen ? '<img class="th" src="' + esc(x.imagen) + '">' : '<span class="th"></span>') + '<span class="a"><b>' + esc(x.titulo) + '</b><span>' + esc(x.anio) + (x.ya ? ' · ' + esc(x.ya.texto) : '') + (ya ? ' · ✓ candidato' : '') + '</span></span></button>'; }).join('') + '</div>';
+              $('pol').querySelectorAll('[data-i]').forEach(function (bb) { bb.onclick = function () { verAlbumPostuma(d, ds[Number(bb.getAttribute('data-i'))], lista); }; });
+            };
+            lista();
           }).catch(function (er) { toast(errMsg(er)); });
         }; });
       }).catch(function (er) { toast(errMsg(er)); });
@@ -1424,6 +1452,8 @@
     $('pogo').onclick = function () {
       var b = this, hom = $('poh').value.trim();
       if (!hom) { toast('Escribe a quién se homenajea'); return; } if (!PO.candidatos.length) { toast('Elige al menos un álbum'); return; }
+      if (!b.getAttribute('data-ok')) { confirmar(b, function () {}); return; }   // 22-nov (backlog 24): segundo toque para confirmar, como en Proponer
+      b.removeAttribute('data-ok'); b.classList.remove('alerta');
       ocupado(b, 'Empezando…');
       api('api_postumaStart', hom, PO.candidatos).then(function (x) { hojaMensajes('Póstuma', [['Para el grupo', x && (x.mensaje || x.mensajeVoto)]]); toast('Póstuma abierta'); })
         .catch(function (er) { toast(errMsg(er)); libre(b); });

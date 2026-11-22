@@ -515,3 +515,7 @@ body[data-tab="historial"] .pagehead,body[data-tab="numeros"] .pagehead,body[dat
 .creditos .cr p{margin:0 0 8px}
 .creditos .cr-t{font-family:var(--f-mono);letter-spacing:.12em;color:var(--bone)}
 .creditos .cr-f{font-style:italic;color:var(--bone)}
+
+/* 22-nov (backlog 9): ficha de un álbum dentro de la póstuma */
+.po-al .po-img{width:120px;height:120px;object-fit:cover;border-radius:8px;float:right;margin:0 0 8px 10px}
+.po-al .list{clear:both}
