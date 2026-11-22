@@ -486,7 +486,7 @@ nav.tabs button.on .ico{color:#CBB6F5}
 body[data-tab="historial"] .pagehead,body[data-tab="numeros"] .pagehead,body[data-tab="panel"] .pagehead{margin-top:env(safe-area-inset-top,0px);padding-top:18px}
 /* 22-nov: «El chaleco» en Yo (tela vaquera oscura cosida, con los parches ganados) */
 .hero.chaleco{aspect-ratio:auto;min-height:200px;display:flex;align-items:flex-end;padding:54px 14px 14px;
-  background:radial-gradient(ellipse at 50% -10%,rgba(155,92,255,.30),transparent 60%),repeating-linear-gradient(45deg,rgba(255,255,255,.04) 0 2px,transparent 2px 5px),repeating-linear-gradient(-45deg,rgba(0,0,0,.28) 0 2px,transparent 2px 5px),linear-gradient(#232a40,#11141f)}
+  background:radial-gradient(ellipse at 50% -10%,rgba(155,92,255,.30),transparent 60%),linear-gradient(rgba(10,8,16,.15),rgba(10,8,16,.45)),url(img/v2/chaleco_fondo.jpg) center 35%/cover no-repeat,#11141f}   /* 22-nov: chaleco de verdad (Gemini) */
 .hero.chaleco::before{content:none}
 .hero.chaleco::after{content:none}
 .ch-in{position:relative;width:100%;border:2px dashed rgba(220,215,235,.28);border-radius:14px;padding:12px 10px 10px;text-align:center}
