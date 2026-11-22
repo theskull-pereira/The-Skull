@@ -509,3 +509,9 @@ body[data-tab="historial"] .pagehead,body[data-tab="numeros"] .pagehead,body[dat
 .ficha-m .fm-h .nm{font-family:var(--f-mark);font-size:24px;color:var(--bone);margin-right:auto}
 .ficha-m .fm-p{width:40px;height:40px;object-fit:contain}
 .ficha-m .facts dd .linkb{text-align:left;padding:0;font-size:inherit}
+
+/* 22-nov: «Créditos» en Yo */
+.creditos .cr{margin-top:8px;font-size:13.5px;color:var(--dust);line-height:1.5}
+.creditos .cr p{margin:0 0 8px}
+.creditos .cr-t{font-family:var(--f-mono);letter-spacing:.12em;color:var(--bone)}
+.creditos .cr-f{font-style:italic;color:var(--bone)}

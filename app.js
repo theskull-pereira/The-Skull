@@ -300,7 +300,7 @@
     h += '<div class="cuentos-t"><img src="img/cuentos_titulo.jpg" alt="Cuentos del Cuaderno" onerror="this.outerHTML=\'<span>Cuentos del Cuaderno</span>\'"></div><div id="dc"><div class="cuaderno"><span class="muted">Abriendo el cuaderno…</span></div></div>';   // 1E
     var conFotos = S.abiertas.some(function (r) { return r.portada; }) || (S.ultima && S.ultima.portada);
     if (conFotos) h += '<a class="dgs" style="align-self:center" target="_blank" rel="noopener" href="https://www.discogs.com">Portadas: Data provided by Discogs.</a>';   // condición de Discogs
-    h += '<p class="foot">' + esc(S.grupo || 'The Skull') + ' · v' + esc(S.version || '1.1') + (VER ? ' · ' + VER : '') + '<br>Imagen original: Milena</p>';
+    h += creditos() + '<p class="foot">' + esc(S.grupo || 'The Skull') + ' · v' + esc(S.version || '1.1') + (VER ? ' · ' + VER : '') + '</p>';   // 22-nov (Carlos): «Créditos» al final de Inicio, con lo de Milena dentro
     return h;
   }
   function enlazarInicio() {
@@ -911,13 +911,13 @@
   }
 
   /* ---------- Historial (4A–4F) ---------- */
-  var H = { vista: 'numero', filtro: '', valor: '', q: '', items: [], total: 0, filtros: null, playlist: false, letra: '' };
+  var H = { vista: 'numero', filtro: '', valor: '', q: '', items: [], total: 0, filtros: null, playlist: false, letra: '', orden: '' };
   function vistaHistorial() {
     var v = $('view');
     var chips = [['numero', 'Por número'], ['az', 'A–Z'], ['playlist', 'Playlist A–Z']].map(function (c) {
       var on = c[0] === 'playlist' ? H.playlist : (!H.playlist && H.vista === c[0]);
       return '<button class="fchip' + (on ? ' on' : '') + '" data-v="' + c[0] + '">' + c[1] + '</button>';
-    }).join('');
+    }).join('') + (H.playlist ? '' : '<button class="fchip" id="hord" title="Cambiar el orden">⇅ ' + (H.vista === 'az' ? (H.orden ? 'Z→A' : 'A→Z') : (H.orden ? 'Antiguas primero' : 'Nuevas primero')) + '</button>');   // 22-nov (backlog 23)
     var f = H.filtros, filtros = '';
     if (f && !H.playlist) {
       filtros = '<div class="chips">' + [['', 'Todas'], ['cumpleaños', '🎂 Cumpleaños · ' + f.cumpleanos], ['póstuma', '✝️ Póstumas · ' + f.postumas], ['abiertas', 'Abiertas']].map(function (c) {
@@ -935,6 +935,7 @@
     v.querySelectorAll('[data-v]').forEach(function (b) { b.onclick = function () { var x = b.getAttribute('data-v'); if (x === 'playlist') { H.playlist = true; } else { H.playlist = false; H.vista = x; } cargarHist(); }; });
     // 21-nov (Carlos): elegir un filtro borra la búsqueda escrita, para no quedarse atrapado en la combinación de las dos
     v.querySelectorAll('[data-f]').forEach(function (b) { b.onclick = function () { H.filtro = b.getAttribute('data-f'); H.valor = ''; H.q = ''; cargarHist(); }; });
+    var ho = $('hord'); if (ho) ho.onclick = function () { H.orden = H.orden ? '' : 'inverso'; cargarHist(); };
     var fd = $('fdec'); if (fd) fd.onchange = function () { H.filtro = fd.value ? 'decada' : ''; H.valor = fd.value; H.q = ''; cargarHist(); };
     var fm = $('fmie'); if (fm) fm.onchange = function () { H.filtro = fm.value ? 'miembro' : ''; H.valor = fm.value; H.q = ''; cargarHist(); };
     var fr = $('fron'); if (fr) fr.onchange = function () { H.filtro = fr.value ? 'ronda' : ''; H.valor = fr.value; H.q = ''; cargarHist(); };
@@ -974,7 +975,7 @@
     }
     if (H.playlist) return cargarPlaylist();
     var seq = ++HSEQ, q0 = H.q;
-    api('api_historial', { vista: H.vista, filtro: H.filtro, valor: H.valor, q: H.q, desde: H.items.length, n: 40 }).then(function (r) {
+    api('api_historial', { vista: H.vista, filtro: H.filtro, valor: H.valor, q: H.q, orden: H.orden, desde: H.items.length, n: 40 }).then(function (r) {
       if (seq !== HSEQ || q0 !== H.q) return;
       if (r.filtros) { var redibujar = !H.filtros; H.filtros = r.filtros; if (redibujar && document.activeElement !== $('hq')) { H.total = r.total; vistaHistorial(); } }
       H.total = r.total; var antes = H.items.length; H.items = H.items.concat(r.items);
@@ -1157,6 +1158,17 @@
 
   /* ---------- Yo (6A–6G) ---------- */
   var MES = ['', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  /** 22-nov (backlog 20, texto aprobado por Carlos): «Créditos», plegado al final de Inicio. */
+  function creditos() {
+    var n = Number(S.totalPropuestas) || 0;
+    return '<details class="note creditos"><summary><b>Créditos</b></summary><div class="cr">' +
+      '<p class="cr-t">THE SKULL · v1.1</p>' +
+      '<p>Diseñada y construida por Pecoso con Claude.</p>' +
+      '<p>Curaduría, reglas y memoria histórica: Chiquito, <i>Master Commander</i>' + (n ? ' — ' + n.toLocaleString('es-ES') + ' propuestas anotadas a mano, cuaderno tras cuaderno, desde el primer día' : '') + '.</p>' +
+      '<p>Imagen original: Milena.<br>Arte de las pantallas y los parches: Creado con Gemini.</p>' +
+      '<p>Motor: Google Apps Script · Pantallas: GitHub Pages · Datos: Discogs y MusicBrainz.<br>Letras: Pirata One, Creepster, Big Shoulders Display, Archivo e IBM Plex Mono (licencia OFL) · Iconos: Tabler (licencia MIT).</p>' +
+      '<p class="cr-f">Pereira – Barcelona – el mundo. Para los que siguen escuchando juntos.</p></div></details>';
+  }
   function vistaYo(todos) {
     var v = $('view');
     v.innerHTML = '<div class="hero"><span class="who">' + esc(S.me.nombre) + '</span></div><div class="spin"></div>';
