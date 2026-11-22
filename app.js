@@ -336,6 +336,30 @@
     var k = String(titulo || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim(), f = PARCHES[k];
     return f ? '<img class="parche ' + (cls || '') + '" src="img/parches/parche_' + f + '.webp" alt="" loading="lazy">' : '';
   }
+  /** 22-nov (Carlos): «El chaleco» de cada uno en Yo: el parche de su título, el de «El Vidente» y uno por cada
+   *  categoría de Números en la que está entre los 3 primeros. */
+  var PARCHES_RANK = [['rankings', 'participacion', 'fiel', 'Participación'], ['rankings', 'ojo', 'oraculo', 'Ojo de ganador'], ['rankings', 'lobo', 'lobo', 'Lobo solitario'],
+    ['rankings', 'tardios', 'tardios', 'El que llega tarde'], ['rankings', 'apaga', 'apagaluces', 'El apagaluces'], ['rankings', 'tortuga', 'tortuga', 'La tortuga'],
+    ['proponentes', 'profeta', 'profeta', 'El profeta'], ['proponentes', 'une', 'une', 'El que une'], ['proponentes', 'explorador', 'explorador', 'El explorador'],
+    ['proponentes', 'arqueologo', 'arqueologo', 'El arqueólogo'], ['proponentes', 'moderno', 'moderno', 'El moderno']];
+  function parchesDe(nombre, p, st) {
+    var out = [], ya = {}, k = function (x) { return String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); };
+    var pon = function (f, et) { if (f && !ya[f]) { ya[f] = 1; out.push({ f: f, t: et }); } };
+    if (p && p.especial) pon(PARCHES[k(p.especial.titulo)], p.especial.titulo);
+    if (p && p.titulo) pon(PARCHES[k(p.titulo.titulo)], p.titulo.titulo);
+    if (st) PARCHES_RANK.forEach(function (x) {
+      var l = ((st[x[0]] || {})[x[1]] || []).slice(0, 3);
+      l.forEach(function (y, i) { if (k(y.nombre) === k(nombre)) pon(x[2], x[3] + ' · ' + (i + 1) + 'º'); });
+    });
+    return out;
+  }
+  function chaleco(nombre, lista) {
+    var giro = [-7, 5, -3, 8, -6, 3, -8, 6, -4, 7, -5, 4];
+    return '<div class="hero chaleco"><span class="who">' + esc(nombre) + '</span><div class="ch-in"><div class="ch-t">El chaleco de <b>' + esc(nombre) + '</b></div>' +
+      (lista.length ? '<div class="ch-p">' + lista.map(function (x, i) { return '<span class="chp"><img class="parche" src="img/parches/parche_' + x.f + '.webp" alt="" style="transform:rotate(' + giro[i % giro.length] + 'deg)"><small>' + esc(x.t) + '</small></span>'; }).join('') + '</div>' +
+        '<div class="ch-n">' + lista.length + (lista.length === 1 ? ' parche' : ' parches') + ' · se ganan en Números</div>'
+        : '<div class="ch-n">Todavía sin parches: se ganan quedando entre los 3 primeros de una categoría de Números.</div>') + '</div></div>';
+  }
   function romano(n) {
     n = parseInt(n, 10); if (!(n > 0 && n < 4000)) return String(n || '');
     var v = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1], s = ['M', 'CM', 'D', 'CD', 'C', 'XC', 'L', 'XL', 'X', 'IX', 'V', 'IV', 'I'], o = '';
@@ -1112,7 +1136,8 @@
     };
     api('api_me').then(function (me) {
       ME = me; var p = me.perfil || {}, m = p.miembro || {}, q = p.propuestas || {};
-      var h = '<div class="hero"><span class="who">' + esc(me.nombre) + '</span></div>';
+      var h = '<div id="chal">' + chaleco(me.nombre, parchesDe(me.nombre, p, NUM)) + '</div>';   // 22-nov: el chaleco con sus parches
+      if (!NUM) api('api_stats11').then(function (st) { NUM = NUM || st; var c = $('chal'); if (c && TAB === 'yo') c.innerHTML = chaleco(me.nombre, parchesDe(me.nombre, p, st)); }).catch(function () {});
       // 6A · Tu perfil Skull
       h += '<div class="perfil"><span class="k" style="color:var(--gold)">Tu perfil Skull</span><div class="ptit">' + esc(me.nombre) + '</div>' +
         (p.titulo ? '<div class="titrow">' + parche(p.titulo.titulo, 'yo-p') + '<div><div class="badge">' + esc(p.titulo.titulo) + '</div><div class="muted" style="font-size:13.5px">' + esc(p.titulo.porque) + '</div></div></div>' : '') +

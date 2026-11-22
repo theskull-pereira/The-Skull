@@ -482,3 +482,18 @@ nav.tabs button.on .ico{color:#CBB6F5}
 .rk-h{position:relative}
 .rk-p{position:absolute;right:-6px;top:-10px;width:64px;height:64px;margin:0;transform:rotate(6deg)}
 .rk-h:has(.rk-p){padding-right:70px;min-height:56px}
+/* 22-nov (Carlos): las cabeceras de Historial, Números y Panel empiezan debajo de la barra del iPhone, como la de Inicio */
+body[data-tab="historial"] .pagehead,body[data-tab="numeros"] .pagehead,body[data-tab="panel"] .pagehead{margin-top:env(safe-area-inset-top,0px);padding-top:18px}
+/* 22-nov: «El chaleco» en Yo (tela vaquera oscura cosida, con los parches ganados) */
+.hero.chaleco{aspect-ratio:auto;min-height:200px;display:flex;align-items:flex-end;padding:54px 14px 14px;
+  background:radial-gradient(ellipse at 50% -10%,rgba(155,92,255,.30),transparent 60%),repeating-linear-gradient(45deg,rgba(255,255,255,.04) 0 2px,transparent 2px 5px),repeating-linear-gradient(-45deg,rgba(0,0,0,.28) 0 2px,transparent 2px 5px),linear-gradient(#232a40,#11141f)}
+.hero.chaleco::before{content:none}
+.hero.chaleco::after{content:none}
+.ch-in{position:relative;width:100%;border:2px dashed rgba(220,215,235,.28);border-radius:14px;padding:12px 10px 10px;text-align:center}
+.ch-t{font-family:var(--f-mark);font-size:24px;color:#F4EEFF;text-shadow:0 0 12px rgba(155,92,255,.6)}
+.ch-t b{font-weight:400}
+.ch-p{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 8px;margin:10px 0 6px}
+.chp{display:flex;flex-direction:column;align-items:center;width:78px}
+.chp .parche{width:66px;height:66px}
+.chp small{font-size:11px;line-height:1.2;color:#CBB6F5;margin-top:4px}
+.ch-n{font-size:12.5px;color:var(--dust)}
