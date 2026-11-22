@@ -500,3 +500,12 @@ body[data-tab="historial"] .pagehead,body[data-tab="numeros"] .pagehead,body[dat
 
 /* 22-nov: hora exacta del voto en «Quién votó», en la hora de quien mira */
 .who-l .hr{grid-column:1/-1;color:var(--dust);font-family:var(--f-mono);font-size:11px;letter-spacing:.03em;margin-top:-2px}
+
+/* 22-nov (backlog 27): Década, Miembro y Ronda en rojo cuando filtran, como los demás filtros; ficha del miembro en Historial */
+.fsel.on{background:var(--blood);border-color:#d8473a;color:#fff}
+.ficha-m{display:block;cursor:default;margin:4px 0 12px;padding:14px 14px 10px}
+.ficha-m::after{content:none!important}
+.ficha-m .fm-h{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.ficha-m .fm-h .nm{font-family:var(--f-mark);font-size:24px;color:var(--bone);margin-right:auto}
+.ficha-m .fm-p{width:40px;height:40px;object-fit:contain}
+.ficha-m .facts dd .linkb{text-align:left;padding:0;font-size:inherit}
