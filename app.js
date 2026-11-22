@@ -126,6 +126,19 @@
       b.onclick = function () { TAB = b.getAttribute('data-tab'); n.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); render(); };
     });
   }
+  // 22-nov (backlog 26): la zona horaria del teléfono se guarda una vez, para que cada uno vea las horas en la suya
+  var ZONA_ENVIADA = false;
+  function zonaTel() { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { return ''; } }
+  function mandarZona(st) {
+    if (ZONA_ENVIADA || !st || !st.me || st.me.zona) return;
+    var z = zonaTel(); if (!/^[A-Za-z]+\/[A-Za-z_\/+-]+$/.test(z)) return;
+    ZONA_ENVIADA = true; api('api_zona', z).catch(function () {});
+  }
+  /** «sáb 28 nov · 7:04 p. m.» en la hora del teléfono de quien mira */
+  function horaLocal(ts) {
+    var d = ts ? new Date(ts) : null; if (!d || isNaN(d)) return '';
+    try { return d.toLocaleString('es', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }); } catch (e) { return d.toISOString().slice(0, 16).replace('T', ' '); }
+  }
   function cargar(silencioso) {
     if (!TOKEN) { $('view').innerHTML = sinEnlace(); return Promise.resolve(); }
     var deMemoria = false;
@@ -135,6 +148,7 @@
     return api('api_state').then(function (st) {
       var igual = deMemoria && JSON.stringify(st) === JSON.stringify(S);
       S = st; memoPon('estado', st);
+      mandarZona(st);
       if (igual) return;
       if (deMemoria) { tabs(); if (TAB === 'inicio' && $('sheet').hidden) render(); return; }
       if (!silencioso || !$('tabs').innerHTML) tabs(); if (!silencioso || TAB === 'inicio') render();
@@ -435,7 +449,7 @@
       else if (x.estado === 'abstencion') sg = '<span class="sg a">Abstención</span>';
       else sg = abierta ? '<span class="sg f">Falta</span>' : '<span class="sg a">Abstención</span>';
       h += '<div class="li"><span class="nm">' + esc(x.miembro) +
-        (x.tardio ? ' <span class="chip grey">tardío</span>' : '') + '</span>' + sg + (x.comentario ? '<span class="cm">«' + esc(x.comentario) + '»</span>' : '') + '</div>';
+        (x.tardio ? ' <span class="chip grey">tardío</span>' : '') + '</span>' + sg + (x.ts && x.estado !== 'sinvoto' ? '<span class="hr">' + esc(horaLocal(x.ts)) + '</span>' : '') + (x.comentario ? '<span class="cm">«' + esc(x.comentario) + '»</span>' : '') + '</div>';
     });
     return h + '</div></details>';
   }
@@ -1415,6 +1429,7 @@
       '<div class="row">' + si('en_rotacion', 'En la rotación') + (nuevo ? '' : si('activo', 'En el grupo')) + si('sin_whatsapp', 'Sin WhatsApp') + '</div>' +
       '<label class="f">Si no tiene WhatsApp, a quién se le manda su enlace<input type="text" id="me_contacto" list="dlm2" value="' + esc(m.contacto) + '"></label><datalist id="dlm2">' + S.miembros.map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>' +
       '<label class="f">Notas<input type="text" id="me_notas" value="' + esc(m.notas) + '"></label>' +
+      (nuevo ? '' : '<label class="f">Zona horaria (sale sola de su teléfono; ej. America/Bogota, Europe/Madrid)<input type="text" id="me_zona_horaria" autocapitalize="off" value="' + esc(m.zona_horaria || '') + '"></label>') +
       '<button class="btn" id="mego">' + (nuevo ? 'Añadir y crear su enlace' : 'Guardar') + '</button>' +
       (nuevo ? '' : '<div class="row"><button class="btn small ghost" id="mepa">' + (m.en_pausa === 'SI' ? 'Quitar la pausa' : 'Poner en pausa') + '</button><button class="btn small ghost" id="mtok">Enlace nuevo (el viejo deja de servir)</button></div>');
     abrirHoja(h);
@@ -1428,7 +1443,7 @@
           .then(function (x) { hojaMensajes('Miembro nuevo', [['Su enlace personal', x.mensaje]]); }).catch(function (e) { toast(errMsg(e)); libre(b); });
         return;
       }
-      var c = {}; ['cumple_dia', 'cumple_mes', 'orden', 'en_rotacion', 'activo', 'contacto', 'notas'].forEach(function (k) { var v = val(k); if (v !== undefined && v !== String(m[k] || '')) c[k] = v; });
+      var c = {}; ['cumple_dia', 'cumple_mes', 'orden', 'en_rotacion', 'activo', 'contacto', 'notas', 'zona_horaria'].forEach(function (k) { var v = val(k); if (v !== undefined && v !== String(m[k] || '')) c[k] = v; });
       var sw = val('sin_whatsapp') === 'SI' ? 'SI' : ''; if (sw !== (m.sin_whatsapp || '')) c.sin_whatsapp = sw;
       if (!Object.keys(c).length) { volver(); return; }
       api('api_memberUpdate', m.nombre, c).then(function (st) { S = st; toast('Guardado'); volver(); }).catch(function (e) { toast(errMsg(e)); libre(b); });
