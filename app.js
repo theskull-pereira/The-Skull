@@ -309,6 +309,12 @@
     var v = $('view');
     v.onclick = function (e) {
       var t = e.target.closest('[data-r]'); if (t) { abrirRonda(t.getAttribute('data-r')); return; }
+      var hq = e.target.closest('[data-hq]');   // 25-nov: «En memoria» → búsqueda en el Historial (sus propuestas y su homenaje)
+      if (hq) {
+        H.playlist = false; H.filtro = ''; H.valor = ''; H.q = hq.getAttribute('data-hq'); TAB = 'historial';
+        $('tabs').querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-tab') === 'historial'); });
+        render(); window.scrollTo(0, 0); return;
+      }
       var hm = e.target.closest('[data-hm]');   // 25-nov: «Los Skulls» → su Historial con su ficha arriba
       if (hm) {
         H.playlist = false; H.q = ''; H.filtro = 'miembro'; H.valor = hm.getAttribute('data-hm'); TAB = 'historial';
@@ -1179,11 +1185,13 @@
       if (!xs.length) return '';
       return '<p class="cr-t">' + t + ' · ' + xs.length + '</p>' + (conWa ? '<div class="sklist">' + xs.map(fila).join('') + '</div>' : '<p>' + xs.map(function (x) { return '<button class="sknom" data-hm="' + esc(x.nombre) + '">' + esc(x.nombre) + '</button>'; }).join(', ') + '</p>');
     };
-    var act = de('activo'), pau = de('pausa'), ex = de('ex'), mem = de('memoria');
-    return '<details class="note creditos skulls"><summary><b>Los Skulls</b> <span class="muted">· ' + (act.length + pau.length) + '</span></summary><div class="cr">' +
+    var act = de('activo'), pau = de('pausa'), ex = de('ex'), mem = de('memoria'), hon = CFG.HONOR;
+    var honor = hon && hon.nombre ? '<div class="skhonor"><p class="cr-t">MIEMBRO DE HONOR</p><p class="skh-n"><button class="sknom" data-hq="' + esc(hon.buscar || hon.nombre) + '">' + esc(hon.nombre).replace(/[«»]/g, function (q) { return '<span class="gq">' + q + '</span>'; }) + '</button></p>' +
+      '<p class="cr-f">' + esc([hon.titulo, hon.texto].filter(Boolean).join('. ')) + '</p></div>' : '';   // 25-nov (Carlos): Victor «Burbuja»
+    return '<details class="skulls"><summary class="btn ghost skbtn">💀 Los Skulls · ' + (act.length + pau.length) + '</summary><div class="note creditos skbody"><div class="cr">' + honor +   // 25-nov (Chiquito): un botón de verdad
       bloque('ACTIVOS', act, true) + bloque('EN PAUSA', pau, true) + bloque('EXMIEMBROS', ex, false) +
-      (mem.length ? '<p class="cr-t">✝ EN MEMORIA</p><p class="cr-f">' + mem.map(function (x) { return '<button class="sknom" data-hm="' + esc(x.nombre) + '">' + esc(x.nombre) + '</button>'; }).join(', ') + '</p>' : '') +
-      '</div></details>';
+      (mem.length ? '<p class="cr-t">✝ EN MEMORIA</p><p class="cr-f">' + mem.map(function (x) { var b = (/«([^»]+)»/.exec(x.nombre) || [])[1] || x.nombre.split(' ')[0]; return '<button class="sknom" data-hq="' + esc(b) + '">' + esc(x.nombre) + '</button>'; }).join(', ') + '</p>' : '') +
+      '</div></div></details>';
   }
   function creditos() {
     var n = Number(S.totalPropuestas) || 0;
@@ -1193,6 +1201,7 @@
       '<p>Curaduría, reglas y memoria histórica: Chiquito, <i>Master Commander</i>' + (n ? ' — ' + n.toLocaleString('es-ES') + ' propuestas anotadas a mano, cuaderno tras cuaderno, desde el primer día' : '') + '.</p>' +
       '<p>Imagen original: Milena.<br>Arte de las pantallas y los parches: Creado con Gemini.</p>' +
       '<p>Motor: Google Apps Script · Pantallas: GitHub Pages · Datos: Discogs y MusicBrainz.<br>Letras: Pirata One, Creepster, Big Shoulders Display, Archivo e IBM Plex Mono (licencia OFL) · Iconos: Tabler (licencia MIT).</p>' +
+      (CFG.HONOR && CFG.HONOR.nombre ? '<p class="cr-f">Dedicada a ' + esc(CFG.HONOR.nombre) + ', miembro de honor' + (CFG.HONOR.titulo ? ' y ' + esc(CFG.HONOR.titulo) : '') + '.</p>' : '') +   // 25-nov (Carlos)
       '<p class="cr-f">Pereira – Barcelona – el mundo. Para los que siguen escuchando juntos.</p></div></details>';
   }
   function vistaYo(todos) {

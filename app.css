@@ -525,3 +525,15 @@ body[data-tab="historial"] .pagehead,body[data-tab="numeros"] .pagehead,body[dat
 .skulls .skrow{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;color:var(--bone);font-size:15px}
 .skulls .skrow .wa{width:auto;flex:0 0 auto;color:#4fce6a;border-color:rgba(79,206,106,.45)}
 .skulls .sknom{background:none;border:0;padding:6px 0;margin:0;font:inherit;color:inherit;text-decoration:underline;text-decoration-color:rgba(200,190,220,.35);text-underline-offset:3px;cursor:pointer;min-height:32px}
+/* 25-nov (Chiquito): «Los Skulls» como botón */
+details.skulls{display:block}
+details.skulls > summary.skbtn{list-style:none;cursor:pointer}
+details.skulls > summary.skbtn::-webkit-details-marker{display:none}
+details.skulls > summary.skbtn::after{content:' ▾'}
+details.skulls[open] > summary.skbtn::after{content:' ▴'}
+details.skulls .skbody{margin-top:10px}
+details.skulls > summary.skbtn::before{content:none;display:none}
+.skulls .skhonor{border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:12px}
+.skulls .skh-n{font-family:var(--f-mark);font-size:26px;color:var(--gold);margin:2px 0 4px}
+.skulls .skh-n .sknom{text-decoration-color:rgba(212,175,55,.45)}
+.skulls .skh-n .gq{font-family:var(--f-body);font-size:.8em;vertical-align:.08em}
