@@ -519,3 +519,9 @@ body[data-tab="historial"] .pagehead,body[data-tab="numeros"] .pagehead,body[dat
 /* 22-nov (backlog 9): ficha de un álbum dentro de la póstuma */
 .po-al .po-img{width:120px;height:120px;object-fit:cover;border-radius:8px;float:right;margin:0 0 8px 10px}
 .po-al .list{clear:both}
+
+/* 25-nov (Chiquito): «Los Skulls» en Inicio */
+.skulls .sklist{display:flex;flex-direction:column;gap:6px;margin:0 0 12px}
+.skulls .skrow{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;color:var(--bone);font-size:15px}
+.skulls .skrow .wa{width:auto;flex:0 0 auto;color:#4fce6a;border-color:rgba(79,206,106,.45)}
+.skulls .sknom{background:none;border:0;padding:6px 0;margin:0;font:inherit;color:inherit;text-decoration:underline;text-decoration-color:rgba(200,190,220,.35);text-underline-offset:3px;cursor:pointer;min-height:32px}

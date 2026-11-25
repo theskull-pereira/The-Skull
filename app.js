@@ -302,13 +302,19 @@
     h += '<div class="cuentos-t"><img src="img/cuentos_titulo.jpg" alt="Cuentos del Cuaderno" onerror="this.outerHTML=\'<span>Cuentos del Cuaderno</span>\'"></div><div id="dc"><div class="cuaderno"><span class="muted">Abriendo el cuaderno…</span></div></div>';   // 1E
     var conFotos = S.abiertas.some(function (r) { return r.portada; }) || (S.ultima && S.ultima.portada);
     if (conFotos) h += '<a class="dgs" style="align-self:center" target="_blank" rel="noopener" href="https://www.discogs.com">Portadas: Data provided by Discogs.</a>';   // condición de Discogs
-    h += creditos() + '<p class="foot">' + esc(S.grupo || 'The Skull') + ' · v' + esc(S.version || '1.1') + (VER ? ' · ' + VER : '') + '</p>';   // 22-nov (Carlos): «Créditos» al final de Inicio, con lo de Milena dentro
+    h += losSkulls() + creditos() + '<p class="foot">' + esc(S.grupo || 'The Skull') + ' · v' + esc(S.version || '1.1') + (VER ? ' · ' + VER : '') + '</p>';   // 22-nov (Carlos): «Créditos» al final de Inicio, con lo de Milena dentro
     return h;
   }
   function enlazarInicio() {
     var v = $('view');
     v.onclick = function (e) {
       var t = e.target.closest('[data-r]'); if (t) { abrirRonda(t.getAttribute('data-r')); return; }
+      var hm = e.target.closest('[data-hm]');   // 25-nov: «Los Skulls» → su Historial con su ficha arriba
+      if (hm) {
+        H.playlist = false; H.q = ''; H.filtro = 'miembro'; H.valor = hm.getAttribute('data-hm'); TAB = 'historial';
+        $('tabs').querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-tab') === 'historial'); });
+        render(); window.scrollTo(0, 0); return;
+      }
       var p = e.target.closest('[data-prop]'); if (p) abrirProponer(p.getAttribute('data-prop'), p.getAttribute('data-por') || '');
     };
     delCuaderno();
@@ -1161,6 +1167,24 @@
   /* ---------- Yo (6A–6G) ---------- */
   var MES = ['', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
   /** 22-nov (backlog 20, texto aprobado por Carlos): «Créditos», plegado al final de Inicio. */
+  /** 25-nov (Chiquito): «Los Skulls», plegado en Inicio: activos, en pausa, exmiembros y «En memoria», con WhatsApp directo. */
+  function losSkulls() {
+    var L = S.skulls || []; if (!L.length) return '';
+    var de = function (g) { return L.filter(function (x) { return x.grupo === g; }); };
+    var fila = function (x) {
+      var b = x.wa ? '<a class="btn ghost small wa" target="_blank" rel="noopener" href="https://wa.me/' + esc(x.wa) + '" aria-label="WhatsApp de ' + esc(x.via || x.nombre) + '">WhatsApp</a>' : '<span class="muted" style="font-size:13px">Sin número</span>';
+      return '<div class="skrow"><span><button class="sknom" data-hm="' + esc(x.nombre) + '">' + esc(x.nombre) + '</button>' + (x.via ? ' <span class="muted" style="font-size:13px">· vía ' + esc(x.via) + '</span>' : '') + '</span>' + b + '</div>';
+    };
+    var bloque = function (t, xs, conWa) {
+      if (!xs.length) return '';
+      return '<p class="cr-t">' + t + ' · ' + xs.length + '</p>' + (conWa ? '<div class="sklist">' + xs.map(fila).join('') + '</div>' : '<p>' + xs.map(function (x) { return '<button class="sknom" data-hm="' + esc(x.nombre) + '">' + esc(x.nombre) + '</button>'; }).join(', ') + '</p>');
+    };
+    var act = de('activo'), pau = de('pausa'), ex = de('ex'), mem = de('memoria');
+    return '<details class="note creditos skulls"><summary><b>Los Skulls</b> <span class="muted">· ' + (act.length + pau.length) + '</span></summary><div class="cr">' +
+      bloque('ACTIVOS', act, true) + bloque('EN PAUSA', pau, true) + bloque('EXMIEMBROS', ex, false) +
+      (mem.length ? '<p class="cr-t">✝ EN MEMORIA</p><p class="cr-f">' + mem.map(function (x) { return '<button class="sknom" data-hm="' + esc(x.nombre) + '">' + esc(x.nombre) + '</button>'; }).join(', ') + '</p>' : '') +
+      '</div></details>';
+  }
   function creditos() {
     var n = Number(S.totalPropuestas) || 0;
     return '<details class="note creditos"><summary><b>Créditos</b></summary><div class="cr">' +
@@ -1486,12 +1510,16 @@
     var nuevo = !m; m = m || { nombre: '', cumple_dia: '', cumple_mes: '', orden: '', en_rotacion: 'SI', activo: 'SI', tipo: 'normal', sin_whatsapp: '', contacto: '', notas: '' };
     var si = function (k, t) { return '<label class="f">' + t + '<select id="me_' + k + '" class="sel"><option' + (m[k] === 'SI' ? ' selected' : '') + '>SI</option><option' + (m[k] !== 'SI' ? ' selected' : '') + '>NO</option></select></label>'; };
     var h = '<div class="top"><button class="back" id="back">‹ Volver</button><span class="k" style="margin-left:auto">' + (nuevo ? 'Miembro nuevo' : esc(m.nombre)) + '</span></div>' +
-      (nuevo ? '<label class="f">Nombre o apodo<input type="text" id="me_nombre"></label>' : '<h2>' + esc(m.nombre) + '</h2>') +
+      (nuevo ? '<label class="f">Nombre o apodo<input type="text" id="me_nombre"></label>' : '<h2>' + esc(m.nombre) + '</h2>' +
+        '<details class="mini"><summary>Cambiar el nombre o apodo</summary><label class="f">Nombre nuevo (cambia en todo el historial: Propuestas, votos y cumpleaños)<input type="text" id="me_renom" value="' + esc(m.nombre) + '" autocomplete="off"></label>' +
+        '<div class="acts"><button class="btn ghost" id="merenb">Cambiar el nombre</button></div></details>') +   // 25-nov (Carlos)
       '<div class="row"><label class="f" style="flex:1">Día del cumpleaños<input type="text" inputmode="numeric" id="me_cumple_dia" value="' + esc(m.cumple_dia) + '"></label><label class="f" style="flex:1">Mes<input type="text" inputmode="numeric" id="me_cumple_mes" value="' + esc(m.cumple_mes) + '"></label></div>' +
       (nuevo ? '' : '<label class="f">Puesto en el orden de la rotación<input type="text" inputmode="numeric" id="me_orden" value="' + esc(m.orden) + '"></label>') +
       '<div class="row">' + si('en_rotacion', 'En la rotación') + (nuevo ? '' : si('activo', 'En el grupo')) + si('sin_whatsapp', 'Sin WhatsApp') + '</div>' +
       '<label class="f">Si no tiene WhatsApp, a quién se le manda su enlace<input type="text" id="me_contacto" list="dlm2" value="' + esc(m.contacto) + '"></label><datalist id="dlm2">' + S.miembros.map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>' +
       '<label class="f">Notas<input type="text" id="me_notas" value="' + esc(m.notas) + '"></label>' +
+      '<label class="f">WhatsApp (con el código del país, ej. +57 310 1234567)<input type="text" inputmode="tel" id="me_whatsapp" autocomplete="off" value="' + esc(m.whatsapp || '') + '"></label>' +
+      (!nuevo && m.activo !== 'SI' ? '<div class="row">' + si('en_memoria', '✝ En memoria') + '</div>' : '') +   // 25-nov: «Los Skulls»
       (nuevo ? '' : '<label class="f">Zona horaria (sale sola de su teléfono; ej. America/Bogota, Europe/Madrid)<input type="text" id="me_zona_horaria" autocapitalize="off" value="' + esc(m.zona_horaria || '') + '"></label>') +
       '<button class="btn" id="mego">' + (nuevo ? 'Añadir y crear su enlace' : 'Guardar') + '</button>' +
       (nuevo ? '' : '<div class="row"><button class="btn small ghost" id="mepa">' + (m.en_pausa === 'SI' ? 'Quitar la pausa' : 'Poner en pausa') + '</button><button class="btn small ghost" id="mtok">Enlace nuevo (el viejo deja de servir)</button></div>');
@@ -1502,16 +1530,22 @@
     $('mego').onclick = function () {
       var b = this; ocupado(b);
       if (nuevo) {
-        api('api_addMember', { nombre: val('nombre'), cumple_dia: val('cumple_dia'), cumple_mes: val('cumple_mes'), en_rotacion: val('en_rotacion'), sin_whatsapp: val('sin_whatsapp') === 'SI' ? 'SI' : '', contacto: val('contacto'), notas: val('notas') })
+        api('api_addMember', { nombre: val('nombre'), cumple_dia: val('cumple_dia'), cumple_mes: val('cumple_mes'), en_rotacion: val('en_rotacion'), sin_whatsapp: val('sin_whatsapp') === 'SI' ? 'SI' : '', contacto: val('contacto'), notas: val('notas'), whatsapp: val('whatsapp') })
           .then(function (x) { hojaMensajes('Miembro nuevo', [['Su enlace personal', x.mensaje]]); }).catch(function (e) { toast(errMsg(e)); libre(b); });
         return;
       }
-      var c = {}; ['cumple_dia', 'cumple_mes', 'orden', 'en_rotacion', 'activo', 'contacto', 'notas', 'zona_horaria'].forEach(function (k) { var v = val(k); if (v !== undefined && v !== String(m[k] || '')) c[k] = v; });
+      var c = {}; ['cumple_dia', 'cumple_mes', 'orden', 'en_rotacion', 'activo', 'contacto', 'notas', 'zona_horaria', 'whatsapp'].forEach(function (k) { var v = val(k); if (v !== undefined && v !== String(m[k] || '')) c[k] = v; });
       var sw = val('sin_whatsapp') === 'SI' ? 'SI' : ''; if (sw !== (m.sin_whatsapp || '')) c.sin_whatsapp = sw;
+      if (val('en_memoria') !== undefined) { var em = val('en_memoria') === 'SI' ? 'SI' : ''; if (em !== (m.en_memoria || '')) c.en_memoria = em; }
       if (!Object.keys(c).length) { volver(); return; }
       api('api_memberUpdate', m.nombre, c).then(function (st) { S = st; toast('Guardado'); volver(); }).catch(function (e) { toast(errMsg(e)); libre(b); });
     };
     if (!nuevo) {
+      $('merenb').onclick = function () {
+        var b = this, nn = val('renom');
+        if (!nn || nn === m.nombre) { toast('Escribe el nombre nuevo'); return; }
+        confirmar(b, function () { ocupado(b); api('api_memberRename', m.nombre, nn).then(function (st) { S = st; toast(m.nombre + ' ahora es ' + nn); volver(); }).catch(function (e) { toast(errMsg(e)); libre(b); }); });
+      };
       $('mepa').onclick = function () { var b = this; ocupado(b); api('api_setPause', m.nombre, m.en_pausa !== 'SI', '').then(function () { toast(m.en_pausa === 'SI' ? 'Volvió de la pausa' : 'En pausa'); volver(); }).catch(function (e) { toast(errMsg(e)); libre(b); }); };
       $('mtok').onclick = function () { var b = this; confirmar(b, function () { ocupado(b); api('api_newToken', m.nombre).then(function (x) { hojaMensajes('Enlace nuevo', [['Su enlace nuevo', x.mensaje]]); }).catch(function (e) { toast(errMsg(e)); libre(b); }); }); };
     }
