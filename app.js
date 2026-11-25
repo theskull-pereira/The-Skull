@@ -288,7 +288,9 @@
         '<span class="win">' + esc(u.ganadora) + '</span><span class="muted" style="font-size:13px">' + esc([quien(u), origen(u)].filter(Boolean).join(' · ')) + '</span></button>';
     }
     // 1D: sin «Abiertas: N normales…» (eso va al Panel)
-    if (S.colaCumples.length) h += '<div class="note"><dl class="facts"><dt>' + ico('cake') + 'Cola de cumpleaños</dt><dd>' + esc(S.colaCumples.join(', ')) + '</dd></dl></div>';
+    if (S.colaCumples.length) h += '<div class="note"><dl class="facts"><dt>' + ico('cake') + 'Cola de cumpleaños</dt><dd>' + esc(S.colaCumples.join(', ')) + '</dd></dl>' +
+      (S.me.esAdmin && S.puedo.porOtro ? '<p class="why">Como admin puedes hacerla en su nombre:</p><div class="acts" style="flex-direction:row;flex-wrap:wrap">' + S.colaCumples.map(function (n) { return '<button class="btn ghost small" style="width:auto;flex:0 0 auto" data-prop="cumpleaños" data-por="' + esc(n) + '">🎂 ' + esc(n) + '</button>'; }).join('') + '</div>' : '') +   // 25-nov (Chiquito): cumpleaños en nombre de otro
+      '</div>';
     if (abiertas.length && S.ultima) {
       var w = S.ultima;
       h += '<button class="note" data-r="' + esc(w.id) + '" style="text-align:left;cursor:pointer;border-style:solid">' + ico('trophy') + 'Lo último que se cerró: <span class="num">#' + esc(w.numero) + '</span> ' + esc(w.banda) +
@@ -1382,6 +1384,7 @@
     h += pc('Cumpleaños', 'Quien cumple años propone aparte del turno normal. Aquí está la cola de los que esperan.',
       '<div class="chips">' + (S.colaCumples.length ? S.colaCumples.map(function (n) { return '<span class="fchip sm">' + esc(n) + ' <button class="x" data-quitar="' + esc(n) + '" aria-label="Quitar a ' + esc(n) + ' de la cola">×</button></span>'; }).join('') : '<span class="muted">La cola está vacía</span>') + '</div>' +
       ((a.proximosCumples || []).length ? '<p class="why">Próximos cumpleaños: ' + a.proximosCumples.map(function (c) { return esc(c.miembro) + ' (' + (c.dias === 0 ? 'hoy' : 'en ' + c.dias + ' días') + ')'; }).join(', ') + '</p>' : '') +
+      (S.colaCumples.length ? '<div class="acts">' + S.colaCumples.map(function (n) { return '<button class="btn small" data-cpor="' + esc(n) + '">🎂 Proponer la de ' + esc(n) + '</button>'; }).join('') + '</div><p class="why">Se guarda como su propuesta de cumpleaños: No mueve la rotación.</p>' : '') +   // 25-nov (Chiquito)
       '<label class="f">Añadir a la cola<div class="acts"><select id="cad" class="sel"><option value="">Elige a un miembro…</option>' + opts(S.miembros) + '</select><button class="btn ghost" id="cadb">Añadir a la cola de cumpleaños</button></div></label>');
     box.innerHTML = h;
     var hecho = function (msg) { toast(msg); cargar(true).then(function () { panelTurnos(box); }); };
@@ -1390,6 +1393,7 @@
     $('cadb').onclick = function () { var n = $('cad').value; if (!n) { toast('Elige a quién'); return; } var b = this; ocupado(b); api('api_cumpleAdd', n).then(function () { hecho(n + ' está en la cola'); }).catch(function (e) { toast(errMsg(e)); libre(b); }); };
     box.querySelectorAll('[data-quitar]').forEach(function (b) { b.onclick = function () { var n = b.getAttribute('data-quitar'); confirmar(b, function () { api('api_cumpleRemove', n).then(function () { hecho(n + ' salió de la cola'); }).catch(function (e) { toast(errMsg(e)); }); }); }; });
     $('pporb').onclick = function () { var n = $('ppor').value; if (!n) { toast('Elige a quién'); return; } abrirProponer('normal', n); };
+    box.querySelectorAll('[data-cpor]').forEach(function (b) { b.onclick = function () { abrirProponer('cumpleaños', b.getAttribute('data-cpor')); }; });
     $('post').onclick = abrirPostuma;
   }
   // Póstuma: a quién se homenajea + discos candidatos (de la discografía) → el grupo vota el disco
