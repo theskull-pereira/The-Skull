@@ -279,7 +279,7 @@
     var falta = function (r) { return r.estado === 'abierta' && !r.miVoto ? 0 : 1; };
     abiertas.sort(function (a, b) { return falta(a) - falta(b) || (parseInt(b.numero, 10) || 0) - (parseInt(a.numero, 10) || 0); });
     if (abiertas.length) {
-      h += '<span class="k sec-t">' + ico('flame') + 'Votando ahora · ' + abiertas.length + '</span>';
+      h += '<span class="k sec-t">' + ico('flame') + 'Votando ahora' + cnt(abiertas.length) + '</span>';
       abiertas.forEach(function (r) { h += tarjeta(r); });
     } else if (S.ultima) {   // 1C
       var u = S.ultima;
@@ -783,7 +783,7 @@
       return '<button class="pick" data-id="' + esc(x.id) + '"' + (x.ya || !x.valido ? ' disabled' : '') + '>' + (x.imagen ? '<img class="th" alt="" loading="lazy" src="' + esc(x.imagen) + '">' : '<span class="th"></span>') +
         '<span class="a"><b>' + esc(x.titulo) + '</b><span>' + esc([x.colab ? x.banda : '', x.anio, tipoTxt(x.tipo)].filter(Boolean).join(' · ')) + '</span>' + nota + '</span></button>';
     };
-    h += '<span class="k sec-t">Para proponer · ' + validos.length + '</span>' + (validos.length ? '<div class="list">' + validos.map(fila).join('') + '</div>' : '<div class="note">De esta banda ya no quedan álbumes de estudio sin proponer.</div>');
+    h += '<span class="k sec-t">Para proponer' + cnt(validos.length) + '</span>' + (validos.length ? '<div class="list">' + validos.map(fila).join('') + '</div>' : '<div class="note">De esta banda ya no quedan álbumes de estudio sin proponer.</div>');
     if (colabs.length) h += '<details class="note"><summary>Colaboraciones · ' + colabs.length + '</summary><div class="list" style="margin-top:6px">' + colabs.map(fila).join('') + '</div></details>';
     // Lo ya propuesto con sus otras bandas y nombres (en Discogs van aparte): que se vea aquí también
     var rel = [];
@@ -833,7 +833,7 @@
     h += '<div class="note"><b>Edición:</b> ' + esc(e.descripcion || '') + (e.alternativas && e.alternativas.length ? '<br><button class="linkb" id="alts" style="margin-top:6px">¿No es esta edición? Ver otras (' + e.alternativas.length + ')</button>' : '') + '</div>';
     (e.avisos || []).forEach(function (a) { h += '<div class="warn"><span>' + esc(a) + '</span></div>'; });
     h += '<div id="altl" hidden class="list"></div>';
-    h += '<span class="k sec-t">Canciones · ' + e.canciones.length + '</span><div class="list">' + e.canciones.map(function (c, i) {
+    h += '<span class="k sec-t">Canciones' + cnt(e.canciones.length) + '</span><div class="list">' + e.canciones.map(function (c, i) {
       return '<div class="track" style="cursor:default"><span class="n">' + esc(c.pos || i + 1) + '</span><span>' + esc(c.titulo) + '</span><span class="c">' + esc(c.duracion || '') + '</span></div>';
     }).join('') + '</div>';
     if (e.fuente === 'Discogs') h += '<a class="dgs" target="_blank" rel="noopener" href="' + esc((e.enlaces && e.enlaces.discogs) || 'https://www.discogs.com') + '">Data provided by Discogs.</a>';
@@ -1175,6 +1175,8 @@
   var MES = ['', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
   /** 22-nov (backlog 20, texto aprobado por Carlos): «Créditos», plegado al final de Inicio. */
   /** 25-nov (Chiquito): «Los Skulls», plegado en Inicio: activos, en pausa, exmiembros y «En memoria», con WhatsApp directo. */
+  /** 26-nov (Carlos): títulos de sección más grandes; la cuenta va aparte, en dorado. */
+  function cnt(x) { return ' <span class="cnt">· ' + x + '</span>'; }
   /** 26-nov (Carlos): bandera a partir del código de dos letras del país (CO → 🇨🇴). */
   function bandera(cc) { cc = String(cc || '').toUpperCase(); return /^[A-Z]{2}$/.test(cc) ? String.fromCodePoint(0x1F1E6 + cc.charCodeAt(0) - 65, 0x1F1E6 + cc.charCodeAt(1) - 65) : ''; }
   function lugar(x) { return x && x.ciudad ? '📍 ' + esc(x.ciudad) + (bandera(x.pais) ? ' ' + bandera(x.pais) : '') : ''; }
@@ -1186,12 +1188,14 @@
       var b = x.wa ? '<a class="btn ghost small wa" target="_blank" rel="noopener" href="https://wa.me/' + esc(x.wa) + '" aria-label="WhatsApp de ' + esc(x.via || x.nombre) + '">WhatsApp</a>' : '<span class="muted" style="font-size:13px">Sin número</span>';
       return '<div class="skrow"><span><button class="sknom" data-hm="' + esc(x.nombre) + '">' + esc(x.nombre) + '</button>' + (x.via ? ' <span class="muted" style="font-size:13px">· vía ' + esc(x.via) + '</span>' : '') + (x.ciudad ? '<span class="skcity">' + lugar(x) + '</span>' : '') + '</span>' + b + '</div>';   // 26-nov: ciudad
     };
-    var bloque = function (t, xs, conWa) {
+    var bloque = function (t, xs, conWa, plegar) {   // 26-nov (Carlos): títulos grandes; ACTIVOS plegable
       if (!xs.length) return '';
-      return '<p class="cr-t">' + t + ' · ' + xs.length + '</p>' + (conWa ? '<div class="sklist">' + xs.map(fila).join('') + '</div>' : '<p>' + xs.map(function (x) { return '<button class="sknom" data-hm="' + esc(x.nombre) + '">' + esc(x.nombre) + '</button>'; }).join(', ') + '</p>');
+      var cab = t + cnt(xs.length);
+      if (plegar) return '<details class="skgrp"><summary class="sk-h">' + cab + '</summary>' + (conWa ? '<div class="sklist">' + xs.map(fila).join('') + '</div>' : '') + '</details>';
+      return '<p class="sk-h">' + cab + '</p>' + (conWa ? '<div class="sklist">' + xs.map(fila).join('') + '</div>' : '<p class="sknames">' + xs.map(function (x) { return '<button class="sknom" data-hm="' + esc(x.nombre) + '">' + esc(x.nombre) + '</button>'; }).join(', ') + '</p>');
     };
     var act = de('activo'), pau = de('pausa'), ex = de('ex'), mem = de('memoria'), hon = CFG.HONOR;
-    var honor = hon && hon.nombre ? '<div class="skhonor"><p class="cr-t">MIEMBRO DE HONOR</p><p class="skh-n"><button class="sknom" data-hq="' + esc(hon.buscar || hon.nombre) + '">' + esc(hon.nombre).replace(/[«»]/g, function (q) { return '<span class="gq">' + q + '</span>'; }) + '</button></p>' +
+    var honor = hon && hon.nombre ? '<div class="skhonor"><p class="sk-h">MIEMBRO DE HONOR</p><p class="skh-n"><button class="sknom" data-hq="' + esc(hon.buscar || hon.nombre) + '">' + esc(hon.nombre).replace(/[«»]/g, function (q) { return '<span class="gq">' + q + '</span>'; }) + '</button></p>' +
       '<p class="cr-f">' + esc([hon.titulo, hon.texto].filter(Boolean).join('. ')) + '</p></div>' : '';   // 25-nov (Carlos): Victor «Burbuja»
     return '<details class="skulls"><summary class="btn ghost skbtn">💀 Los Skulls · ' + (act.length + pau.length) + '</summary><div class="note creditos skbody"><div class="cr">' + honor +   // 25-nov (Chiquito): un botón de verdad
       (function () {   // 26-nov (Carlos): «Desde 9 ciudades en 4 países»
@@ -1199,8 +1203,8 @@
         var nc = Object.keys(c).length, np = Object.keys(p).length;
         return nc ? '<p class="cr-f skdesde">🌎 Desde ' + nc + (nc === 1 ? ' ciudad' : ' ciudades') + (np > 1 ? ' en ' + np + ' países' : '') + '</p>' : '';
       })() +
-      bloque('ACTIVOS', act, true) + bloque('EN PAUSA', pau, true) + bloque('EXMIEMBROS', ex, false) +
-      (mem.length ? '<p class="cr-t">✝ EN MEMORIA</p><p class="cr-f">' + mem.map(function (x) { var b = (/«([^»]+)»/.exec(x.nombre) || [])[1] || x.nombre.split(' ')[0]; return '<button class="sknom" data-hq="' + esc(b) + '">' + esc(x.nombre) + '</button>'; }).join(', ') + '</p>' : '') +
+      bloque('ACTIVOS', act, true, true) + bloque('EN PAUSA', pau, true) + bloque('EXMIEMBROS', ex, false) +
+      (mem.length ? '<p class="sk-h">✝ EN MEMORIA' + cnt(mem.length) + '</p><p class="sknames">' + mem.map(function (x) { var b = (/«([^»]+)»/.exec(x.nombre) || [])[1] || x.nombre.split(' ')[0]; return '<button class="sknom" data-hq="' + esc(b) + '">' + esc(x.nombre) + '</button>'; }).join(', ') + '</p>' : '') +
       '</div></div></details>';
   }
   function creditos() {
@@ -1250,19 +1254,19 @@
       // 6C · Tus propuestas
       if (q.lista && q.lista.length) {
         var ganadas = q.lista.filter(function (x) { return x.suya; }).length;
-        h += '<span class="k sec-t">Tus propuestas · ' + q.lista.length + ' · tu canción ganó ' + ganadas + '</span><div class="list">' +
+        h += '<span class="k sec-t">Tus propuestas' + cnt(q.lista.length + ' · tu canción ganó ' + ganadas) + '</span><div class="list">' +
           q.lista.slice().reverse().slice(0, 8).map(function (r) { return filaRonda(r, r.suya ? '✓ la tuya' : ''); }).join('') + '</div>' +
           (q.lista.length > 8 ? '<button class="btn ghost" data-todo="propuestas">Ver todas</button>' : '');
       }
       // 6D · Tus votos
       if (me.votos && me.votos.length) {
         var ok = me.votos.filter(function (x) { return x.gano; }).length;
-        h += '<span class="k sec-t">Tus votos · ' + miles(me.totalVotos) + '</span><div class="list">' + me.votos.slice(0, 10).map(votoFila).join('') + '</div>' +
+        h += '<span class="k sec-t">Tus votos' + cnt(miles(me.totalVotos)) + '</span><div class="list">' + me.votos.slice(0, 10).map(votoFila).join('') + '</div>' +
           '<button class="btn ghost" data-todo="votos">Ver todos</button>';
       }
       // 6E · Tu afinidad
       if (p.afinidad && p.afinidad.length) {
-        h += '<span class="k sec-t">Tu afinidad · cuánto votan como tú</span>' + barrasSimple(p.afinidad.map(function (a) { return [a.con, a.pct]; }), function (n) { return Math.round(n) + '%'; });
+        h += '<details class="secd"><summary class="k sec-t">Tu afinidad' + cnt('cuánto votan como tú') + '</summary>' + barrasSimple(p.afinidad.map(function (a) { return [a.con, a.pct]; }), function (n) { return Math.round(n) + '%'; }) + '</details>';   // 26-nov (Carlos): plegable
       }
       h += '<button class="btn ghost" id="vreg">📜 Reglas de The Skull</button>';
       // 6G
@@ -1453,7 +1457,7 @@
         '<span class="m">' + esc([d.artista.pais, e.anio || x.anio].filter(Boolean).join(' · ')) + '</span></div>' +
         (e.descripcion ? '<div class="muted" style="font-size:13px;margin-top:6px"><b>Edición:</b> ' + esc(e.descripcion) + '</div>' : '') +
         (e.avisos || []).map(function (a) { return '<div class="warn"><span>' + esc(a) + '</span></div>'; }).join('') +
-        (can.length ? '<span class="k sec-t">Canciones · ' + can.length + '</span><div class="list">' + can.map(function (c, i) { return '<div class="track" style="cursor:default"><span class="n">' + esc(c.pos || i + 1) + '</span><span>' + esc(c.titulo) + '</span><span class="c">' + esc(c.duracion || '') + '</span></div>'; }).join('') + '</div>' : '<div class="muted" style="margin-top:6px">No encontré la lista de canciones de este álbum.</div>') +
+        (can.length ? '<span class="k sec-t">Canciones' + cnt(can.length) + '</span><div class="list">' + can.map(function (c, i) { return '<div class="track" style="cursor:default"><span class="n">' + esc(c.pos || i + 1) + '</span><span>' + esc(c.titulo) + '</span><span class="c">' + esc(c.duracion || '') + '</span></div>'; }).join('') + '</div>' : '<div class="muted" style="margin-top:6px">No encontré la lista de canciones de este álbum.</div>') +
         '<div class="row" style="margin-top:10px"><button class="btn small" id="poadd"' + (yaEs() ? ' disabled' : '') + '>' + (yaEs() ? '✓ Ya es candidato' : 'Añadir como candidato') + '</button><button class="btn small ghost" id="povol">‹ Volver a los álbumes</button></div></div>';
       $('povol').onclick = volverLista;
       $('poadd').onclick = function () {

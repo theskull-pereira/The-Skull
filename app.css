@@ -525,6 +525,7 @@ body[data-tab="historial"] .pagehead,body[data-tab="numeros"] .pagehead,body[dat
 .skulls .skrow{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;color:var(--bone);font-size:15px}
 .skulls .skcity{display:block;font-size:13px;color:var(--dust);margin-top:1px}
 .skulls .skdesde{margin:0 0 12px}
+.skulls .sknames{font-size:15px;color:var(--bone);font-style:normal}   /* 26-nov (Chiquito): Exmiembros y En memoria del tamaño de los demás */
 .skulls .skrow .wa{width:auto;flex:0 0 auto;color:#4fce6a;border-color:rgba(79,206,106,.45)}
 .skulls .sknom{background:none;border:0;padding:6px 0;margin:0;font:inherit;color:inherit;text-decoration:underline;text-decoration-color:rgba(200,190,220,.35);text-underline-offset:3px;cursor:pointer;min-height:32px}
 /* 25-nov (Chiquito): «Los Skulls» como botón */
@@ -539,3 +540,16 @@ details.skulls > summary.skbtn::before{content:none;display:none}
 .skulls .skh-n{font-family:var(--f-mark);font-size:26px;color:var(--gold);margin:2px 0 4px}
 .skulls .skh-n .sknom{text-decoration-color:rgba(212,175,55,.45)}
 .skulls .skh-n .gq{font-family:var(--f-body);font-size:.8em;vertical-align:.08em}
+
+/* 26-nov (Carlos): títulos de sección más visibles en toda la app (antes letra pequeña de máquina de escribir) */
+.k.sec-t:not(.grp){font-family:var(--f-head);font-weight:700;font-size:19px;letter-spacing:.05em;text-transform:uppercase;color:var(--bone);text-shadow:none;margin:22px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line);line-height:1.15;flex-wrap:wrap;gap:0 4px}
+.k.sec-t .cnt,.sk-h .cnt{font-family:var(--f-mono);font-weight:400;font-size:13px;letter-spacing:.06em;color:var(--gold);text-transform:none}
+.sk-h,.creditos .cr-t{font-family:var(--f-head);font-weight:700;font-size:18px;letter-spacing:.05em;text-transform:uppercase;color:var(--bone);margin:16px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--line);line-height:1.15}
+.skhonor .sk-h{margin-top:0}
+details.secd > summary,details.skgrp > summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:0 4px;flex-wrap:wrap}
+details.secd > summary::-webkit-details-marker,details.skgrp > summary::-webkit-details-marker{display:none}
+details.secd > summary::after,details.skgrp > summary::after{content:'';margin-left:auto;align-self:center;width:8px;height:8px;border-right:2px solid var(--dust);border-bottom:2px solid var(--dust);transform:rotate(45deg);transition:transform .2s}
+details.secd[open] > summary::after,details.skgrp[open] > summary::after{transform:rotate(-135deg)}
+details.skgrp{margin:0 0 4px}
+.hhead{font-family:var(--f-head);font-weight:700;font-size:16px;letter-spacing:.06em;padding:20px 2px 6px}
+details.secd > summary::before,details.skgrp > summary::before{display:none}   /* 26-nov: sin el triángulo rojo; la flecha va a la derecha */
