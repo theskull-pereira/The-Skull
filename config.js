@@ -5,5 +5,5 @@ window.SKULL_CONFIG = {
   MOTOR: 'https://script.google.com/macros/s/AKfycbx0BM-1mCd9vWFOTDRVpPhOrABoyWndSLCY5YhQXnx5-FsSi9fyaoiEyYllZZ7ZBT2R/exec',
   GRUPO: 'The Skull',
   // 25-nov (Carlos): miembro de honor en «Los Skulls» y en «Créditos» (nunca fue miembro; no va en la lista de miembros)
-  HONOR: { nombre: 'Victor «Burbuja»', titulo: 'General de cinco estrellas', texto: 'The Skull y sus votaciones van en su memoria.', buscar: 'Burbuja' }
+  HONOR: { nombre: 'Victor «Burbuja»', titulo: '', texto: 'The Skull y sus votaciones van en su memoria.', buscar: 'Burbuja' }
 };

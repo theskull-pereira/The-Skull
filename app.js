@@ -1012,6 +1012,7 @@
     var fila = function (k, v) { return v || v === 0 ? '<dt>' + k + '</dt><dd>' + v + '</dd>' : ''; };
     var disco = function (r) { return r ? '<button class="linkb" data-r="' + esc(r.id) + '">#' + esc(r.numero) + ' · ' + esc(r.banda) + ' – ' + esc(r.disco) + '</button>' : ''; };
     return '<div class="card ficha-m"><div class="fm-h"><span class="nm">' + esc(x.nombre) + '</span>' + (x.titulo ? parche(x.titulo, 'fm-p') + '<span class="k">' + esc(x.titulo) + '</span>' : '') + '</div><dl class="facts">' +
+      (function () { var s = (S.skulls || []).filter(function (k) { return k.nombre === x.nombre; })[0]; return s && s.ciudad ? fila('Vive en', lugar(s)) : ''; })() +   // 26-nov
       fila('Propuestas', '<b>' + x.propuestas + '</b>' + (x.cumpleanos ? ' · 🎂 ' + x.cumpleanos + ' de cumpleaños' : '')) +
       fila('La primera', disco(x.primera)) + (x.ultima && x.primera && x.ultima.id !== x.primera.id ? fila('La última', disco(x.ultima)) : '') +
       (x.rondas ? fila('Votos', '<b>' + x.votos + '</b> de ' + x.rondas + ' · ' + String(x.participacion).replace('.', ',') + '&nbsp;%') : '') +
@@ -1174,12 +1175,16 @@
   var MES = ['', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
   /** 22-nov (backlog 20, texto aprobado por Carlos): «Créditos», plegado al final de Inicio. */
   /** 25-nov (Chiquito): «Los Skulls», plegado en Inicio: activos, en pausa, exmiembros y «En memoria», con WhatsApp directo. */
+  /** 26-nov (Carlos): bandera a partir del código de dos letras del país (CO → 🇨🇴). */
+  function bandera(cc) { cc = String(cc || '').toUpperCase(); return /^[A-Z]{2}$/.test(cc) ? String.fromCodePoint(0x1F1E6 + cc.charCodeAt(0) - 65, 0x1F1E6 + cc.charCodeAt(1) - 65) : ''; }
+  function lugar(x) { return x && x.ciudad ? '📍 ' + esc(x.ciudad) + (bandera(x.pais) ? ' ' + bandera(x.pais) : '') : ''; }
+  var PAISES_ = [['CO', 'Colombia'], ['ES', 'España'], ['GB', 'Reino Unido'], ['CH', 'Suiza'], ['US', 'Estados Unidos'], ['CA', 'Canadá'], ['MX', 'México'], ['AR', 'Argentina'], ['CL', 'Chile'], ['PE', 'Perú'], ['EC', 'Ecuador'], ['VE', 'Venezuela'], ['PA', 'Panamá'], ['DE', 'Alemania'], ['FR', 'Francia'], ['IT', 'Italia'], ['NL', 'Países Bajos'], ['PT', 'Portugal'], ['AU', 'Australia']];
   function losSkulls() {
     var L = S.skulls || []; if (!L.length) return '';
     var de = function (g) { return L.filter(function (x) { return x.grupo === g; }); };
     var fila = function (x) {
       var b = x.wa ? '<a class="btn ghost small wa" target="_blank" rel="noopener" href="https://wa.me/' + esc(x.wa) + '" aria-label="WhatsApp de ' + esc(x.via || x.nombre) + '">WhatsApp</a>' : '<span class="muted" style="font-size:13px">Sin número</span>';
-      return '<div class="skrow"><span><button class="sknom" data-hm="' + esc(x.nombre) + '">' + esc(x.nombre) + '</button>' + (x.via ? ' <span class="muted" style="font-size:13px">· vía ' + esc(x.via) + '</span>' : '') + '</span>' + b + '</div>';
+      return '<div class="skrow"><span><button class="sknom" data-hm="' + esc(x.nombre) + '">' + esc(x.nombre) + '</button>' + (x.via ? ' <span class="muted" style="font-size:13px">· vía ' + esc(x.via) + '</span>' : '') + (x.ciudad ? '<span class="skcity">' + lugar(x) + '</span>' : '') + '</span>' + b + '</div>';   // 26-nov: ciudad
     };
     var bloque = function (t, xs, conWa) {
       if (!xs.length) return '';
@@ -1189,6 +1194,11 @@
     var honor = hon && hon.nombre ? '<div class="skhonor"><p class="cr-t">MIEMBRO DE HONOR</p><p class="skh-n"><button class="sknom" data-hq="' + esc(hon.buscar || hon.nombre) + '">' + esc(hon.nombre).replace(/[«»]/g, function (q) { return '<span class="gq">' + q + '</span>'; }) + '</button></p>' +
       '<p class="cr-f">' + esc([hon.titulo, hon.texto].filter(Boolean).join('. ')) + '</p></div>' : '';   // 25-nov (Carlos): Victor «Burbuja»
     return '<details class="skulls"><summary class="btn ghost skbtn">💀 Los Skulls · ' + (act.length + pau.length) + '</summary><div class="note creditos skbody"><div class="cr">' + honor +   // 25-nov (Chiquito): un botón de verdad
+      (function () {   // 26-nov (Carlos): «Desde 9 ciudades en 4 países»
+        var c = {}, p = {}; act.concat(pau).forEach(function (x) { if (x.ciudad) { c[String(x.ciudad).toLowerCase() + '|' + x.pais] = 1; if (x.pais) p[x.pais] = 1; } });
+        var nc = Object.keys(c).length, np = Object.keys(p).length;
+        return nc ? '<p class="cr-f skdesde">🌎 Desde ' + nc + (nc === 1 ? ' ciudad' : ' ciudades') + (np > 1 ? ' en ' + np + ' países' : '') + '</p>' : '';
+      })() +
       bloque('ACTIVOS', act, true) + bloque('EN PAUSA', pau, true) + bloque('EXMIEMBROS', ex, false) +
       (mem.length ? '<p class="cr-t">✝ EN MEMORIA</p><p class="cr-f">' + mem.map(function (x) { var b = (/«([^»]+)»/.exec(x.nombre) || [])[1] || x.nombre.split(' ')[0]; return '<button class="sknom" data-hq="' + esc(b) + '">' + esc(x.nombre) + '</button>'; }).join(', ') + '</p>' : '') +
       '</div></div></details>';
@@ -1529,6 +1539,8 @@
       '<label class="f">Notas<input type="text" id="me_notas" value="' + esc(m.notas) + '"></label>' +
       '<label class="f">WhatsApp (con el código del país, ej. +57 310 1234567)<input type="text" inputmode="tel" id="me_whatsapp" autocomplete="off" value="' + esc(m.whatsapp || '') + '"></label>' +
       (!nuevo && m.activo !== 'SI' ? '<div class="row">' + si('en_memoria', '✝ En memoria') + '</div>' : '') +   // 25-nov: «Los Skulls»
+      (nuevo ? '' : '<div class="row"><label class="f" style="flex:1">Ciudad donde vive<input type="text" id="me_ciudad" autocomplete="off" value="' + esc(m.ciudad || '') + '"></label>' +
+        '<label class="f" style="flex:1">País<select id="me_pais" class="sel"><option value="">—</option>' + PAISES_.concat(m.pais && !PAISES_.some(function (p) { return p[0] === m.pais; }) ? [[m.pais, m.pais]] : []).map(function (p) { return '<option value="' + p[0] + '"' + (m.pais === p[0] ? ' selected' : '') + '>' + bandera(p[0]) + ' ' + esc(p[1]) + '</option>'; }).join('') + '</select></label></div>') +   // 26-nov (Carlos)
       (nuevo ? '' : '<label class="f">Zona horaria (sale sola de su teléfono; ej. America/Bogota, Europe/Madrid)<input type="text" id="me_zona_horaria" autocapitalize="off" value="' + esc(m.zona_horaria || '') + '"></label>') +
       '<button class="btn" id="mego">' + (nuevo ? 'Añadir y crear su enlace' : 'Guardar') + '</button>' +
       (nuevo ? '' : '<div class="row"><button class="btn small ghost" id="mepa">' + (m.en_pausa === 'SI' ? 'Quitar la pausa' : 'Poner en pausa') + '</button><button class="btn small ghost" id="mtok">Enlace nuevo (el viejo deja de servir)</button></div>');
@@ -1543,7 +1555,7 @@
           .then(function (x) { hojaMensajes('Miembro nuevo', [['Su enlace personal', x.mensaje]]); }).catch(function (e) { toast(errMsg(e)); libre(b); });
         return;
       }
-      var c = {}; ['cumple_dia', 'cumple_mes', 'orden', 'en_rotacion', 'activo', 'contacto', 'notas', 'zona_horaria', 'whatsapp'].forEach(function (k) { var v = val(k); if (v !== undefined && v !== String(m[k] || '')) c[k] = v; });
+      var c = {}; ['cumple_dia', 'cumple_mes', 'orden', 'en_rotacion', 'activo', 'contacto', 'notas', 'zona_horaria', 'whatsapp', 'ciudad', 'pais'].forEach(function (k) { var v = val(k); if (v !== undefined && v !== String(m[k] || '')) c[k] = v; });
       var sw = val('sin_whatsapp') === 'SI' ? 'SI' : ''; if (sw !== (m.sin_whatsapp || '')) c.sin_whatsapp = sw;
       if (val('en_memoria') !== undefined) { var em = val('en_memoria') === 'SI' ? 'SI' : ''; if (em !== (m.en_memoria || '')) c.en_memoria = em; }
       if (!Object.keys(c).length) { volver(); return; }
