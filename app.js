@@ -1259,7 +1259,7 @@
         var nc = Object.keys(c).length, np = Object.keys(p).length;
         return nc ? '<p class="cr-f skdesde">🌎 Desde ' + nc + (nc === 1 ? ' ciudad' : ' ciudades') + (np > 1 ? ' en ' + np + ' países' : '') + '</p>' : '';
       })() +
-      bloque('ACTIVOS', act, true, true) + bloque('EN PAUSA', pau, true) + bloque('EXMIEMBROS', ex, false) +
+      bloque('ACTIVOS', act, true, true) + bloque('EN PAUSA', pau, true, true) + bloque('EXMIEMBROS', ex, false) +
       (mem.length ? '<p class="sk-h">✝ EN MEMORIA' + cnt(mem.length) + '</p><p class="sknames">' + mem.map(function (x) { var b = (/«([^»]+)»/.exec(x.nombre) || [])[1] || x.nombre.split(' ')[0]; return '<button class="sknom" data-hq="' + esc(b) + '">' + esc(x.nombre) + '</button>'; }).join(', ') + '</p>' : '') +
       '</div></div></details>';
   }
@@ -1275,7 +1275,7 @@
     return '<details class="note creditos"><summary><b>Créditos</b></summary><div class="cr">' +
       '<p class="cr-t">THE SKULL · v' + VERSION_APP + '</p>' +
       '<p>Diseñada y construida por Pecoso con Claude.</p>' +
-      '<p>Curaduría, reglas y memoria histórica: Chiquito, <i>Master Commander</i>' + (n ? ' — ' + n.toLocaleString('es-ES') + ' propuestas anotadas a mano, cuaderno tras cuaderno, desde el primer día' : '') + '.</p>' +
+      '<p>Curaduría, reglas y memoria histórica: Chiquito, <i>Master Commander</i> — todas las propuestas anotadas a mano, cuaderno tras cuaderno, desde el primer día.</p>' +   // 28-nov (Carlos): sin el número
       '<p>Idea original: Milena. La idea surgió de un grupo que Mile tenía con unos amigos de Armenia, «Clásicos Metaleros»: Le propuso a Chiquito hacer lo mismo con el combo de Pereira, y así comenzó.</p>' +   // 28-nov (Carlos)
       '<p>Imagen original: Milena.<br>Arte de las pantallas y los parches: Creado con Gemini.</p>' +
       '<p>Motor: Google Apps Script · Pantallas: GitHub Pages · Datos: Discogs y MusicBrainz.<br>Letras: Pirata One, Creepster, Big Shoulders Display, Archivo e IBM Plex Mono (licencia OFL) · Iconos: Tabler (licencia MIT).</p>' +
