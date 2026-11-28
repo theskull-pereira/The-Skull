@@ -557,3 +557,6 @@ details.secd > summary::before,details.skgrp > summary::before{display:none}   /
 
 /* 28-nov: la barra de abajo en su propia capa, para que el iPhone no la deje flotando */
 nav.tabs{-webkit-transform:translateZ(0);transform:translateZ(0);-webkit-backface-visibility:hidden;backface-visibility:hidden}
+/* 28-nov (Carlos): Historial › «🎸 Banda» */
+.hsf .fchip{white-space:nowrap;flex:none}
+.sug-banda{align-self:flex-start;margin:0 0 10px;display:inline-block}

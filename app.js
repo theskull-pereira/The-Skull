@@ -976,7 +976,7 @@
   }
 
   /* ---------- Historial (4A–4F) ---------- */
-  var H = { vista: 'numero', filtro: '', valor: '', q: '', items: [], total: 0, filtros: null, playlist: false, letra: '', orden: '' };
+  var H = { vista: 'numero', filtro: '', valor: '', q: '', campo: '', items: [], total: 0, filtros: null, playlist: false, letra: '', orden: '' };
   function vistaHistorial() {
     var v = $('view');
     document.body.setAttribute('data-hf', H.filtro === 'póstuma' && !H.playlist ? 'postuma' : '');   // 28-nov (Carlos): con «Póstumas», el cementerio de cruces blancas
@@ -994,7 +994,8 @@
     }
     // 22-nov (backlog 27): el contador de arriba dice «propuestas» y se actualiza con cada filtro o búsqueda
     v.innerHTML = '<div class="pagehead"><h2>Historial</h2><span class="k" id="htot"' + (H.total && !H.playlist ? '' : ' hidden') + '>' + cuantasProp(H.total) + '</span></div>' +
-      (H.playlist ? '' : '<form id="hs" class="hsf"><input type="search" id="hq" placeholder="Buscar: #627, ronda XLIII, banda, álbum, canción, miembro, año" value="' + esc(H.q) + '" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">' +
+      (H.playlist ? '' : '<form id="hs" class="hsf"><input type="search" id="hq" placeholder="' + (H.campo === 'banda' ? 'Buscar solo bandas: Kiss, Iron…' : 'Buscar: #627, ronda XLIII, banda, álbum, canción, miembro, año') + '" value="' + esc(H.q) + '" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">' +
+        '<button type="button" class="fchip sm' + (H.campo === 'banda' ? ' on' : '') + '" id="hqb" title="Buscar solo en el nombre de la banda">🎸 Banda</button>' +   // 28-nov (Carlos)
         '<button type="button" class="btn small ghost" id="hqx"' + (H.q ? '' : ' hidden') + '>✕ Borrar</button></form>') +
       '<div class="chips">' + chips + '</div>' + filtros +
       ((H.filtro === 'estilo' || H.filtro === 'pais' || (H.filtro === 'decada' && H.desdeNum)) && !H.playlist ? '<div class="note filtro-est">' + ({ estilo: 'Estilo', pais: 'País', decada: 'Década' })[H.filtro] + ': <b>' + esc(H.filtro === 'decada' ? 'Años ' + (Number(H.valor) < 2000 ? String(H.valor).slice(2) : H.valor) : H.valor) + '</b><button class="btn small ghost" id="festx">Quitar filtro ✕</button><button class="btn small ghost" id="festn">‹ Volver a Números</button></div>' : '') + '<div id="hl"><div class="spin"></div></div>';
@@ -1024,7 +1025,17 @@
       if (v.length >= 2) vistaHistorial.t = setTimeout(function () { buscaYa(hq.value); }, 500);
     };
     if (hqx) hqx.onclick = function () { clearTimeout(vistaHistorial.t); hq.value = ''; buscaYa(''); hq.focus(); };
+    // 28-nov (Carlos): «🎸 Banda» busca solo en el nombre de la banda (Kiss = la banda Kiss, no todo lo que tenga «kiss»)
+    var hqb = $('hqb'); if (hqb) hqb.onclick = function () { clearTimeout(vistaHistorial.t); bandaModo(!H.campo); };
     v.onclick = function (e) { var t = e.target.closest('[data-r]'); if (t) abrirRonda(t.getAttribute('data-r')); };
+  }
+  function bandaModo(on) {
+    H.campo = on ? 'banda' : '';
+    var b = $('hqb'), q = $('hq');
+    if (b) b.classList.toggle('on', on);
+    if (q) { q.placeholder = on ? 'Buscar solo bandas: Kiss, Iron…' : 'Buscar: #627, ronda XLIII, banda, álbum, canción, miembro, año'; var v = q.value.trim(); if (v !== H.q) { H.q = v; var x = $('hqx'); if (x) x.hidden = !v; } }
+    if (H.q) { if (H.filtro) { H.filtro = ''; H.valor = ''; quitarFiltrosVisibles(); } cargarHist(false, true); }
+    else if (q && on) q.focus();
   }
   var HSEQ = 0;   // cada pedido lleva su número: una respuesta vieja que llega tarde no pisa a la nueva
   /** Pone «Todas» encendido y los desplegables en blanco sin redibujar la pantalla (el teclado no se cierra). */
@@ -1040,12 +1051,12 @@
       else vistaHistorial();
     }
     if (H.playlist) return cargarPlaylist();
-    var seq = ++HSEQ, q0 = H.q;
-    api('api_historial', { vista: H.vista, filtro: H.filtro, valor: H.valor, q: H.q, orden: H.orden, desde: H.items.length, n: 40 }).then(function (r) {
-      if (seq !== HSEQ || q0 !== H.q || TAB !== 'historial') return;
+    var seq = ++HSEQ, q0 = H.q, c0 = H.campo;
+    api('api_historial', { vista: H.vista, filtro: H.filtro, valor: H.valor, q: H.q, campo: H.q ? H.campo : '', orden: H.orden, desde: H.items.length, n: 40 }).then(function (r) {
+      if (seq !== HSEQ || q0 !== H.q || c0 !== H.campo || TAB !== 'historial') return;
       if (r.filtros) { var redibujar = !H.filtros; H.filtros = r.filtros; if (redibujar && document.activeElement !== $('hq')) { H.total = r.total; vistaHistorial(); } }
       H.total = r.total; var antes = H.items.length; H.items = H.items.concat(r.items);
-      if (!antes) H.resumen = r.resumen || null;
+      if (!antes) { H.resumen = r.resumen || null; H.sugBanda = r.bandaExacta || null; }
       var ht = $('htot'); if (ht) { ht.textContent = cuantasProp(H.total); ht.hidden = !H.total || H.playlist; }
       pintarHist(antes);
     }).catch(function (e) { if (seq !== HSEQ) return; var b = $('hl'); if (b) b.innerHTML = '<div class="err">' + esc(errMsg(e)) + '</div>'; });
@@ -1075,8 +1086,13 @@
   }
   function pintarHist(antes) {
     var box = $('hl'); if (!box) return;
-    if (!H.items.length) { box.innerHTML = '<div class="note">No encontré nada' + (H.q ? ' con «' + esc(H.q) + '»' : '') + (H.filtro ? ' con el filtro puesto. Toca «Todas» para quitarlo' : '') + '.</div>'; return; }
-    if (!antes) box.innerHTML = (H.resumen && H.filtro === 'miembro' ? fichaMiembro(H.resumen) : '') + '<div class="list" id="hll"></div>';
+    if (!H.items.length) { box.innerHTML = '<div class="note">' + (H.campo === 'banda' && H.q ? 'No hay ninguna banda con «' + esc(H.q) + '». Toca «🎸 Banda» para buscar en todo' : 'No encontré nada' + (H.q ? ' con «' + esc(H.q) + '»' : '') + (H.filtro ? ' con el filtro puesto. Toca «Todas» para quitarlo' : '')) + '.</div>'; return; }
+    if (!antes) {
+      box.innerHTML = (H.resumen && H.filtro === 'miembro' ? fichaMiembro(H.resumen) : '') +
+        (H.sugBanda && !H.campo ? '<button class="fchip sug-banda" id="hsugb">🎸 Ver solo la banda ' + esc(H.sugBanda.banda) + ' (' + H.sugBanda.n + ')</button>' : '') +   // 28-nov (Carlos)
+        '<div class="list" id="hll"></div>';
+      var sb = $('hsugb'); if (sb) sb.onclick = function (e) { e.stopPropagation(); bandaModo(true); };
+    }
     var mas = $('hmas'); if (mas) mas.remove();
     $('hll').insertAdjacentHTML('beforeend', H.items.slice(antes).map(filaHist).join(''));
     if (H.items.length < H.total) {
