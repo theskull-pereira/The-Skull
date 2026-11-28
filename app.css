@@ -441,6 +441,7 @@ body[data-tab="historial"] .pagehead,body[data-tab="numeros"] .pagehead,body[dat
   background:linear-gradient(180deg,rgba(11,10,14,0) 30%,#0B0A0E 100%),linear-gradient(90deg,rgba(11,10,14,.15),rgba(11,10,14,.7)),var(--ph) center/cover no-repeat}
 body[data-tab="historial"] .pagehead,body[data-tab="panel"] .pagehead{--ph:url(img/v2/ph_historial.jpg)}
 body[data-tab="numeros"] .pagehead{--ph:url(img/v2/ph_numeros.jpg)}
+body[data-tab="historial"][data-hf="postuma"] .pagehead{--ph:url(img/v2/ph_postumas.jpg)}   /* 28-nov: Historial › Póstumas */
 .pagehead h2{font-family:var(--f-mark);font-weight:400;text-transform:none;letter-spacing:.01em;font-size:44px;text-shadow:0 0 18px rgba(155,92,255,.55),0 2px 4px #000}
 .pagehead .k{color:#CBB6F5}
 .hello{font-family:var(--f-mark);font-weight:400;text-transform:none;letter-spacing:.01em;font-size:34px;text-shadow:0 0 16px rgba(155,92,255,.5)}

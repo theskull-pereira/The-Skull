@@ -928,6 +928,7 @@
   var H = { vista: 'numero', filtro: '', valor: '', q: '', items: [], total: 0, filtros: null, playlist: false, letra: '', orden: '' };
   function vistaHistorial() {
     var v = $('view');
+    document.body.setAttribute('data-hf', H.filtro === 'póstuma' && !H.playlist ? 'postuma' : '');   // 28-nov (Carlos): con «Póstumas», el cementerio de cruces blancas
     var chips = [['numero', 'Por número'], ['az', 'A–Z'], ['playlist', 'Playlist A–Z']].map(function (c) {
       var on = c[0] === 'playlist' ? H.playlist : (!H.playlist && H.vista === c[0]);
       return '<button class="fchip' + (on ? ' on' : '') + '" data-v="' + c[0] + '">' + c[1] + '</button>';
@@ -945,15 +946,15 @@
       (H.playlist ? '' : '<form id="hs" class="hsf"><input type="search" id="hq" placeholder="Buscar: #627, ronda XLIII, banda, álbum, canción, miembro, año" value="' + esc(H.q) + '" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">' +
         '<button type="button" class="btn small ghost" id="hqx"' + (H.q ? '' : ' hidden') + '>✕ Borrar</button></form>') +
       '<div class="chips">' + chips + '</div>' + filtros +
-      (H.filtro === 'estilo' && !H.playlist ? '<div class="note filtro-est">Estilo: <b>' + esc(H.valor) + '</b><button class="btn small ghost" id="festx">Quitar filtro ✕</button><button class="btn small ghost" id="festn">‹ Volver a Números</button></div>' : '') + '<div id="hl"><div class="spin"></div></div>';
+      ((H.filtro === 'estilo' || H.filtro === 'pais' || (H.filtro === 'decada' && H.desdeNum)) && !H.playlist ? '<div class="note filtro-est">' + ({ estilo: 'Estilo', pais: 'País', decada: 'Década' })[H.filtro] + ': <b>' + esc(H.filtro === 'decada' ? 'Años ' + (Number(H.valor) < 2000 ? String(H.valor).slice(2) : H.valor) : H.valor) + '</b><button class="btn small ghost" id="festx">Quitar filtro ✕</button><button class="btn small ghost" id="festn">‹ Volver a Números</button></div>' : '') + '<div id="hl"><div class="spin"></div></div>';
     v.querySelectorAll('[data-v]').forEach(function (b) { b.onclick = function () { var x = b.getAttribute('data-v'); if (x === 'playlist') { H.playlist = true; } else { H.playlist = false; H.vista = x; } cargarHist(); }; });
     // 21-nov (Carlos): elegir un filtro borra la búsqueda escrita, para no quedarse atrapado en la combinación de las dos
     v.querySelectorAll('[data-f]').forEach(function (b) { b.onclick = function () { H.filtro = b.getAttribute('data-f'); H.valor = ''; H.q = ''; cargarHist(); }; });
     var ho = $('hord'); if (ho) ho.onclick = function () { H.orden = H.orden ? '' : 'inverso'; cargarHist(); };
-    var fd = $('fdec'); if (fd) fd.onchange = function () { H.filtro = fd.value ? 'decada' : ''; H.valor = fd.value; H.q = ''; cargarHist(); };
+    var fd = $('fdec'); if (fd) fd.onchange = function () { H.filtro = fd.value ? 'decada' : ''; H.valor = fd.value; H.q = ''; H.desdeNum = false; cargarHist(); };
     var fm = $('fmie'); if (fm) fm.onchange = function () { H.filtro = fm.value ? 'miembro' : ''; H.valor = fm.value; H.q = ''; cargarHist(); };
     var fr = $('fron'); if (fr) fr.onchange = function () { H.filtro = fr.value ? 'ronda' : ''; H.valor = fr.value; H.q = ''; cargarHist(); };
-    var fx = $('festx'); if (fx) fx.onclick = function () { H.filtro = ''; H.valor = ''; cargarHist(); };
+    var fx = $('festx'); if (fx) fx.onclick = function () { H.filtro = ''; H.valor = ''; H.desdeNum = false; cargarHist(); };
     var fn = $('festn'); if (fn) fn.onclick = function () { H.filtro = ''; H.valor = ''; TAB = 'numeros'; $('tabs').querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-tab') === 'numeros'); }); render(); };
     // Búsqueda (14-nov): busca sola mientras se escribe, y al borrar el texto vuelve la lista completa.
     // Antes solo cambiaba al pulsar «Buscar» en el teclado: si se borraba el texto, la búsqueda vieja seguía puesta.
@@ -1088,7 +1089,7 @@
   function barrasSimple(arr, fmt, toca) {   // toca: nombre del atributo si cada fila se puede tocar (p. ej. 'data-estilo')
     var max = Math.max.apply(null, arr.map(function (x) { return x[1]; }).concat([1]));
     return '<div class="sec">' + arr.map(function (x) {
-      if (toca) return '<button type="button" class="sb toca" ' + toca + '="' + esc(x[0]) + '"><span>' + esc(x[0]) + ' ›</span><span class="bb"><i style="width:' + Math.round(x[1] * 100 / max) + '%"></i></span><span class="v">' + (fmt ? fmt(x[1]) : x[1]) + '</span></button>';
+      if (toca) return '<button type="button" class="sb toca" ' + toca + '="' + esc(x[2] != null ? x[2] : x[0]) + '"><span>' + esc(x[0]) + ' ›</span><span class="bb"><i style="width:' + Math.round(x[1] * 100 / max) + '%"></i></span><span class="v">' + (fmt ? fmt(x[1]) : x[1]) + '</span></button>';
       return '<div class="sb"><span>' + esc(x[0]) + '</span><span class="bb"><i style="width:' + Math.round(x[1] * 100 / max) + '%"></i></span><span class="v">' + (fmt ? fmt(x[1]) : x[1]) + '</span></div>';
     }).join('') + '</div>';
   }
@@ -1107,9 +1108,10 @@
         m.textContent = abrir ? 'Mostrar menos ▴' : m.getAttribute('data-mas') + ' ▾';
         return;
       }
-      var es = e.target.closest('[data-estilo]');
-      if (es) {   // Historial con solo los discos de ese estilo
-        H.playlist = false; H.q = ''; H.filtro = 'estilo'; H.valor = es.getAttribute('data-estilo'); TAB = 'historial';
+      var es = e.target.closest('[data-estilo],[data-pais],[data-decada]');
+      if (es) {   // Historial con solo los álbumes de ese estilo, país o década (28-nov: país y década, backlog 19)
+        var tipo = es.hasAttribute('data-estilo') ? 'estilo' : (es.hasAttribute('data-pais') ? 'pais' : 'decada');
+        H.playlist = false; H.q = ''; H.filtro = tipo; H.valor = es.getAttribute('data-' + tipo); H.desdeNum = true; TAB = 'historial';
         $('tabs').querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-tab') === 'historial'); });
         render(); window.scrollTo(0, 0); return;
       }
@@ -1149,15 +1151,18 @@
       h += ranking('El profeta', 'En sus propias propuestas, qué porcentaje de las veces ganó la canción que él mismo votó', pr.profeta, function (x) { return pct(x.profeta); }, null, ptd.profeta);
       h += ranking('El que une', 'Qué tan de acuerdo estuvo el grupo con sus álbumes: Más alto = los votos se juntaron en una sola canción', pr.une, function (x) { return pct(x.une); }, null, ptd.une);
       h += ranking('El explorador', 'Qué porcentaje de sus propuestas fue una banda que el grupo nunca había propuesto', pr.explorador, function (x) { return pct(x.explorador); }, null, ptd.explorador);
-      h += ranking('El arqueólogo', 'Año medio de los álbumes que propone: Los más antiguos primero', pr.arqueologo, function (x) { return x.edad; }, null, ptd.arqueologo);
-      h += ranking('El moderno', 'Año medio de los álbumes que propone: Los más recientes primero', pr.moderno, function (x) { return x.edad; }, null, ptd.moderno);
+      var albs = function (n) { return n + (n === 1 ? ' álbum' : ' álbumes'); };   // 28-nov (Carlos): por cuántos álbumes viejos o nuevos propone, no por el año medio
+      h += ranking('El arqueólogo', 'Cuántos álbumes anteriores a 1980 ha propuesto', pr.arqueologo, function (x) { return albs(x.viejos || 0); }, null, ptd.arqueologo);
+      h += ranking('El moderno', 'Cuántos álbumes de 2010 en adelante ha propuesto', pr.moderno, function (x) { return albs(x.nuevos || 0); }, null, ptd.moderno);
       h += '<span class="k sec-t grp">Récords</span>';
       h += rankingRondas('Las más unánimes', 'Propuestas donde más gente votó la misma canción (mínimo 8 votos)', rc.unanimes, rc.unanimesTodas, function (r) { return r.ganadoraVotos + ' de ' + r.votos; });
       h += rankingRondas('Las más divididas', 'Propuestas con más canciones distintas votadas (mínimo 8 votos)', rc.divididas, rc.divididasTodas, function (r) { return r.distintas + ' canciones'; });
+      h += rankingRondas('Los álbumes más antiguos', 'Los álbumes más viejos que se han propuesto en el grupo', rc.antiguos, rc.antiguosTodos, function (r) { return r.anio; });   // 28-nov (backlog 18)
+      h += rankingRondas('Los álbumes más nuevos', 'Los álbumes más recientes que se han propuesto en el grupo', rc.nuevos, rc.nuevosTodos, function (r) { return r.anio; });
       h += barrasMas('Las bandas más propuestas', 'Cuántos de sus álbumes se han propuesto en el grupo', rc.topBandas, 10);
-      h += '<div class="rank"><div class="rk-h"><b>Por década</b><span class="muted">Cuántos álbumes propuestos salieron en cada década</span></div>' + barrasSimple(s.decadas.map(function (d) { return [d[0].replace(/^19|^20/, "'").replace('s', 's'), d[1]]; })) + '</div>';
+      h += '<div class="rank"><div class="rk-h"><b>Por década</b><span class="muted">Toca una década para ver sus álbumes. Cuántos álbumes propuestos salieron en cada década</span></div>' + barrasSimple(s.decadas.map(function (d) { return [d[0].replace(/^19|^20/, "'").replace('s', 's'), d[1], String(d[0]).slice(0, 4)]; }), null, 'data-decada') + '</div>';   // 28-nov (backlog 19)
       if (s.estilos && s.estilos.length) h += barrasMas('Por estilo', 'Toca un estilo para ver sus álbumes. Según Discogs; un álbum puede tener varios estilos', s.estilos, 10, null, 'data-estilo');
-      if (s.paises && s.paises.length) h += barrasMas('Por país', 'País de origen de la banda de cada álbum propuesto', s.paises, 10);
+      if (s.paises && s.paises.length) h += barrasMas('Por país', 'Toca un país para ver sus álbumes. País de origen de la banda de cada álbum propuesto', s.paises, 10, null, 'data-pais');   // 28-nov (backlog 19)
       h += '<p class="foot">Las rondas del historial cuentan solo mientras cada uno estaba en el grupo.</p>';
       v.innerHTML = h;
     };
@@ -1251,6 +1256,7 @@
       var cum = me.cumpleDia ? 'Tu cumpleaños: <b>' + esc(me.cumpleDia) + ' de ' + MES[Number(me.cumpleMes)] + '</b>.' : '';
       if (me.cumple) cum += ' Tienes tu propuesta de cumpleaños pendiente' + (me.cumple.vence ? ': Vence el <b>' + esc(fLarga(me.cumple.vence)) + '</b>' : '') + '.';
       h += '<div class="note"><dl class="facts" style="grid-template-columns:1fr"><dd>' + (turno || '') + '</dd>' + (cum ? '<dd>' + cum + '</dd>' : '') + '</dl></div>';
+      h += zonaYo();   // 28-nov (backlog 26)
       // 6C · Tus propuestas
       if (q.lista && q.lista.length) {
         var ganadas = q.lista.filter(function (x) { return x.suya; }).length;
@@ -1275,10 +1281,36 @@
         '<b>Android (Chrome):</b> toca los tres puntos de arriba a la derecha y elige «Añadir a pantalla de inicio» o «Instalar app».</div></details>' +
         '<div class="note">Este es tu enlace personal: No lo compartas. Si lo pierdes, pídele uno nuevo a Chiquito.</div>' +
         '<p class="foot">' + esc(S.grupo || 'The Skull') + ' · v' + esc(S.version || '1.1') + '</p>';
-      v.innerHTML = h;
+      v.innerHTML = h; zonaYoActivar();
     }).catch(function (e) { v.innerHTML = '<div class="hero"></div><div class="err">' + esc(errMsg(e)) + '</div>'; });
   }
   var ME = null;
+  /** 28-nov (backlog 26): cada uno elige su zona horaria en Yo (las horas de «Quién votó» salen en la suya). */
+  var ZONAS = [['America/Bogota', 'Colombia'], ['Europe/Madrid', 'España'], ['Europe/London', 'Reino Unido'], ['Europe/Zurich', 'Suiza'], ['Europe/Berlin', 'Alemania'],
+    ['Europe/Paris', 'Francia'], ['Europe/Rome', 'Italia'], ['America/New_York', 'EE. UU. (este)'], ['America/Chicago', 'EE. UU. (centro)'], ['America/Denver', 'EE. UU. (montaña)'],
+    ['America/Los_Angeles', 'EE. UU. (pacífico)'], ['America/Toronto', 'Canadá (este)'], ['America/Mexico_City', 'México'], ['America/Panama', 'Panamá'], ['America/Lima', 'Perú'],
+    ['America/Guayaquil', 'Ecuador'], ['America/Caracas', 'Venezuela'], ['America/Santiago', 'Chile'], ['America/Argentina/Buenos_Aires', 'Argentina'], ['America/Sao_Paulo', 'Brasil'], ['Australia/Sydney', 'Australia']];
+  function zonaNombre(z) { var x = ZONAS.filter(function (y) { return y[0] === z; })[0]; return x ? x[1] : String(z || '').replace(/_/g, ' '); }
+  function zonaYo() {
+    var actual = (S.me && S.me.zona) || '', tel = zonaTel(), lista = ZONAS.slice();
+    [actual, tel].forEach(function (z) { if (z && !lista.some(function (y) { return y[0] === z; })) lista.push([z, z.replace(/_/g, ' ')]); });
+    var sel = actual || tel || 'America/Bogota';
+    return '<details class="note" id="zonad"><summary><b>Tu zona horaria</b> · ' + esc(actual ? zonaNombre(actual) : 'sin elegir') + '</summary><div style="margin-top:8px">' +
+      'Las horas de la app (por ejemplo en «Quién votó») salen en tu zona. Si te mudas o viajas, cámbiala aquí.' +
+      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px"><select id="zsel" class="fsel">' + lista.map(function (y) { return '<option value="' + esc(y[0]) + '"' + (y[0] === sel ? ' selected' : '') + '>' + esc(y[1] + (y[1] !== y[0] ? ' · ' + y[0].replace(/_/g, ' ') : '')) + '</option>'; }).join('') + '</select>' +
+      '<button type="button" class="btn small" id="zok">Guardar</button><span id="zmsg" class="muted"></span></div></div></details>';
+  }
+  function zonaYoActivar() {
+    var b = $('zok'); if (!b) return;
+    b.onclick = function () {
+      var z = $('zsel').value, msg = $('zmsg'); b.disabled = true; msg.textContent = ' Guardando…';
+      api('api_zona', z, true).then(function (r) {
+        b.disabled = false;
+        if (r && r.ok) { S.me.zona = r.zona; msg.textContent = ' Guardada ✓'; var sm = document.querySelector('#zonad summary'); if (sm) sm.innerHTML = '<b>Tu zona horaria</b> · ' + esc(zonaNombre(r.zona)); }
+        else msg.textContent = ' No se pudo guardar.';
+      }).catch(function (e) { b.disabled = false; msg.textContent = ' ' + errMsg(e); });
+    };
+  }
   function votoFila(x) {
     return '<button class="hrow" data-r="' + esc(x.id) + '"><span class="num" style="min-width:44px">#' + esc(x.numero) + '</span><span class="a"><span class="t1">' + esc(x.banda) + ' – ' + esc(x.disco) + '</span><span class="' + (x.gano ? 'w' : 'muted') + '" style="font-size:14px">' + esc(x.cancion === ABST ? 'Abstención' : x.cancion) + '</span></span>' +
       '<span style="margin-left:auto;font-size:13px" class="' + (x.gano ? 'gold' : 'muted') + '">' + (x.abierta ? 'votándose' : (x.gano ? '✓ ganó' : '')) + '</span></button>';
