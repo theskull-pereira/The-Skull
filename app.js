@@ -70,6 +70,7 @@
   /* ---------- conexión con el motor ---------- */
   var LECTURAS = ['api_state', 'api_round', 'api_historial', 'api_playlist', 'api_delCuaderno', 'api_portadas', 'api_stats11', 'api_me', 'api_buscarBanda',
     'api_buscarDisco', 'api_discografia', 'api_edicion', 'api_miembros', 'api_ajustes', 'api_mensajes', 'api_mensaje11', 'api_log', 'api_inbox', 'api_roundEditInfo'];
+  var VERSION_APP = '1.2';   // 28-nov (Carlos): la versión del lanzamiento
   var LENTAS = { api_discografia: 1, api_buscarBanda: 1, api_buscarDisco: 1, api_edicion: 1, api_portadas: 1, api_propose: 1, api_postumaStart: 1, api_stats11: 1 };   // 28-nov: búsquedas en internet, pueden tardar más
   function api(fn) {
     var args = [TOKEN].concat(Array.prototype.slice.call(arguments, 1));
@@ -140,6 +141,14 @@
     var d = ts ? new Date(ts) : null; if (!d || isNaN(d)) return '';
     try { return d.toLocaleString('es', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }); } catch (e) { return d.toISOString().slice(0, 16).replace('T', ' '); }
   }
+  /** 28-nov: al llegar novedades, Inicio se vuelve a pintar sin saltar arriba y sin cerrar lo que estaba abierto (Los Skulls, Créditos…). */
+  function repintarEnSitio() {
+    var y = window.scrollY || 0, abiertos = [];
+    document.querySelectorAll('#view details').forEach(function (d, i) { if (d.open) abiertos.push(i); });
+    render();
+    var ds = document.querySelectorAll('#view details'); abiertos.forEach(function (i) { if (ds[i]) ds[i].open = true; });
+    window.scrollTo(0, y);
+  }
   function cargar(silencioso) {
     if (!TOKEN) { $('view').innerHTML = sinEnlace(); return Promise.resolve(); }
     var deMemoria = false;
@@ -151,8 +160,8 @@
       S = st; memoPon('estado', st);
       mandarZona(st);
       if (igual) return;
-      if (deMemoria) { tabs(); if (TAB === 'inicio' && $('sheet').hidden) render(); return; }
-      if (!silencioso || !$('tabs').innerHTML) tabs(); if (!silencioso || TAB === 'inicio') render();
+      if (deMemoria) { tabs(); if (TAB === 'inicio' && $('sheet').hidden) repintarEnSitio(); return; }
+      if (!silencioso || !$('tabs').innerHTML) tabs(); if (!silencioso) render(); else if (TAB === 'inicio') repintarEnSitio();
     }).catch(function (e) {
       if (silencioso) return;
       if (deMemoria && e && e.red) { toast('Sin conexión: Ves lo último que se guardó'); return; }
@@ -303,7 +312,7 @@
     h += '<div class="cuentos-t"><img src="img/cuentos_titulo.jpg" alt="Cuentos del Cuaderno" onerror="this.outerHTML=\'<span>Cuentos del Cuaderno</span>\'"></div><div id="dc"><div class="cuaderno"><span class="muted">Abriendo el cuaderno…</span></div></div>';   // 1E
     var conFotos = S.abiertas.some(function (r) { return r.portada; }) || (S.ultima && S.ultima.portada);
     if (conFotos) h += '<a class="dgs" style="align-self:center" target="_blank" rel="noopener" href="https://www.discogs.com">Portadas: Data provided by Discogs.</a>';   // condición de Discogs
-    h += losSkulls() + creditos() + '<p class="foot">' + esc(S.grupo || 'The Skull') + ' · v' + esc(S.version || '1.1') + (VER ? ' · ' + VER : '') + '</p>';   // 22-nov (Carlos): «Créditos» al final de Inicio, con lo de Milena dentro
+    h += losSkulls() + creditos() + '<p class="foot">' + esc(S.grupo || 'The Skull') + ' · v' + VERSION_APP + (VER && S.me && S.me.esAdmin ? ' · ' + VER : '') + '</p>';   // 28-nov (Carlos): v1.2 para todos; el número de publicación solo lo ven los admins   // 22-nov (Carlos): «Créditos» al final de Inicio, con lo de Milena dentro
     return h;
   }
   function enlazarInicio() {
@@ -1254,16 +1263,24 @@
       (mem.length ? '<p class="sk-h">✝ EN MEMORIA' + cnt(mem.length) + '</p><p class="sknames">' + mem.map(function (x) { var b = (/«([^»]+)»/.exec(x.nombre) || [])[1] || x.nombre.split(' ')[0]; return '<button class="sknom" data-hq="' + esc(b) + '">' + esc(x.nombre) + '</button>'; }).join(', ') + '</p>' : '') +
       '</div></div></details>';
   }
+  /** 28-nov (Carlos): Pereira primero y luego todas las ciudades donde vive alguien del grupo. Salen de la hoja (Miembros › ciudad), nunca del código. */
+  function ciudadesSkull() {
+    var vistas = {}, L = [];
+    (S.skulls || []).forEach(function (x) { var c = String(x.ciudad || '').trim(), k = c.toLowerCase(); if (c && !vistas[k]) { vistas[k] = 1; L.push(c); } });
+    L = L.filter(function (c) { return c.toLowerCase() !== 'pereira'; }).sort(function (a, b) { return a.localeCompare(b, 'es', { sensitivity: 'base' }); });
+    return ['Pereira'].concat(L.length ? L : ['Barcelona', 'el mundo']).join(' – ');
+  }
   function creditos() {
     var n = Number(S.totalPropuestas) || 0;
     return '<details class="note creditos"><summary><b>Créditos</b></summary><div class="cr">' +
-      '<p class="cr-t">THE SKULL · v1.1</p>' +
+      '<p class="cr-t">THE SKULL · v' + VERSION_APP + '</p>' +
       '<p>Diseñada y construida por Pecoso con Claude.</p>' +
       '<p>Curaduría, reglas y memoria histórica: Chiquito, <i>Master Commander</i>' + (n ? ' — ' + n.toLocaleString('es-ES') + ' propuestas anotadas a mano, cuaderno tras cuaderno, desde el primer día' : '') + '.</p>' +
+      '<p>Idea original: Milena. La idea surgió de un grupo que Mile tenía con unos amigos de Armenia, «Clásicos Metaleros»: Le propuso a Chiquito hacer lo mismo con el combo de Pereira, y así comenzó.</p>' +   // 28-nov (Carlos)
       '<p>Imagen original: Milena.<br>Arte de las pantallas y los parches: Creado con Gemini.</p>' +
       '<p>Motor: Google Apps Script · Pantallas: GitHub Pages · Datos: Discogs y MusicBrainz.<br>Letras: Pirata One, Creepster, Big Shoulders Display, Archivo e IBM Plex Mono (licencia OFL) · Iconos: Tabler (licencia MIT).</p>' +
       (CFG.HONOR && CFG.HONOR.nombre ? '<p class="cr-f">Dedicada a ' + esc(CFG.HONOR.nombre) + ', miembro de honor' + (CFG.HONOR.titulo ? ' y ' + esc(CFG.HONOR.titulo) : '') + '.</p>' : '') +   // 25-nov (Carlos)
-      '<p class="cr-f">Pereira – Barcelona – el mundo. Para los que siguen escuchando juntos.</p></div></details>';
+      '<p class="cr-f">' + esc(ciudadesSkull()) + '. Para los que siguen escuchando juntos.</p></div></details>';
   }
   function vistaYo(todos) {
     var v = $('view');
@@ -1323,7 +1340,7 @@
         'Abre primero tu enlace personal (el de WhatsApp) y, desde esa misma página:<br><b>iPhone (Safari):</b> toca el botón de compartir (el cuadrado con la flecha) y elige «Añadir a pantalla de inicio».<br>' +
         '<b>Android (Chrome):</b> toca los tres puntos de arriba a la derecha y elige «Añadir a pantalla de inicio» o «Instalar app».</div></details>' +
         '<div class="note">Este es tu enlace personal: No lo compartas. Si lo pierdes, pídele uno nuevo a Chiquito.</div>' +
-        '<p class="foot">' + esc(S.grupo || 'The Skull') + ' · v' + esc(S.version || '1.1') + '</p>';
+        '<p class="foot">' + esc(S.grupo || 'The Skull') + ' · v' + VERSION_APP + (VER && S.me && S.me.esAdmin ? ' · ' + VER : '') + '</p>';
       v.innerHTML = h; zonaYoActivar();
     }).catch(function (e) { if (TAB === 'yo') v.innerHTML = '<div class="hero"></div><div class="err">' + esc(errMsg(e)) + '</div>'; });
   }
@@ -1386,7 +1403,7 @@
     v.innerHTML = '<div class="pagehead"><h2>Panel</h2><span class="k">' + esc(S.me.nombre) + (S.me.esTecnico ? ' · admin técnico' : ' · admin') + '</span></div>' +
       seccion('hoy', 'Hoy', '', 'Votaciones abiertas, empates y cierres') + seccion('revisar', 'Por revisar', a.porRevisar ? '<span class="chip go" id="chipRev">' + a.porRevisar + '</span>' : '', 'Dudas del cuaderno que solo tú puedes resolver') +
       seccion('turnos', 'Turnos y cumpleaños', '', 'Quién propone, proponer por otro, póstumas y cumpleaños') + seccion('miembros', 'Miembros y enlaces', '', 'Altas, pausas y el enlace personal de cada uno') + seccion('datos', 'Datos', '', 'Corregir rondas, canciones y votos · registro') + seccion('ajustes', 'Ajustes', '', 'Mensajes de WhatsApp, reglas y valores de la app') +
-      '<p class="foot">' + esc(S.grupo || 'The Skull') + ' · v' + esc(S.version || '1.1') + '</p>';
+      '<p class="foot">' + esc(S.grupo || 'The Skull') + ' · v' + VERSION_APP + (VER && S.me && S.me.esAdmin ? ' · ' + VER : '') + '</p>';
     v.onclick = null;
     v.querySelectorAll('details.psec').forEach(function (d) {
       d.addEventListener('toggle', function () { var id = d.getAttribute('data-s'); PANEL.abiertos[id] = d.open; if (d.open && Date.now() - (d._t || 0) > 1500) { d._t = Date.now(); cargarSeccion(id); } });
