@@ -70,17 +70,18 @@
   /* ---------- conexión con el motor ---------- */
   var LECTURAS = ['api_state', 'api_round', 'api_historial', 'api_playlist', 'api_delCuaderno', 'api_portadas', 'api_stats11', 'api_me', 'api_buscarBanda',
     'api_buscarDisco', 'api_discografia', 'api_edicion', 'api_miembros', 'api_ajustes', 'api_mensajes', 'api_mensaje11', 'api_log', 'api_inbox', 'api_roundEditInfo'];
+  var LENTAS = { api_discografia: 1, api_buscarBanda: 1, api_buscarDisco: 1, api_edicion: 1, api_portadas: 1, api_propose: 1, api_postumaStart: 1, api_stats11: 1 };   // 28-nov: búsquedas en internet, pueden tardar más
   function api(fn) {
     var args = [TOKEN].concat(Array.prototype.slice.call(arguments, 1));
     if (typeof window.SKULL_DEMO === 'function') return Promise.resolve().then(function () { return window.SKULL_DEMO(fn, args); });
     if (!CFG.MOTOR) return Promise.reject(new Error('La app todavía no está conectada.'));
     var lectura = LECTURAS.indexOf(fn) >= 0;
     function pedir() {
-      var ctl = typeof AbortController === 'function' ? new AbortController() : null, corta = ctl ? setTimeout(function () { ctl.abort(); }, 90000) : 0;
+      var ctl = typeof AbortController === 'function' ? new AbortController() : null, corta = ctl ? setTimeout(function () { ctl.abort(); }, LENTAS[fn] ? 60000 : 30000) : 0;   // 28-nov: antes 90 s; si la conexión se queda colgada, se avisa en vez de esperar minutos
       return fetch(CFG.MOTOR, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: fn, args: args }), signal: ctl ? ctl.signal : undefined })
         .then(function (res) { clearTimeout(corta); return res; }, function (e) { clearTimeout(corta); throw e; })
         .then(function (res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
-        .catch(function (e) { var x = new Error(lectura ? 'No hay conexión con la app en este momento. Inténtalo de nuevo.' : 'La app no respondió. Espera unos segundos y vuelve a intentarlo.'); x.red = true; throw x; });
+        .catch(function (e) { var x = new Error(lectura ? 'Sin conexión en este momento. Revisa el internet del teléfono e inténtalo de nuevo.' : 'La app no respondió (puede ser la conexión). Mira si quedó hecho antes de repetirlo.'); x.red = true; throw x; });
     }
     // Fallos de conexión (no errores de la app): las pantallas que solo leen se reintentan solas una vez.
     // Las acciones (votar, proponer, cerrar…) nunca se repiten solas, para que nada se mande dos veces.
@@ -123,7 +124,7 @@
     n.innerHTML = t.map(function (x) { return '<button data-tab="' + x[0] + '"' + (x[0] === TAB ? ' class="on"' : '') + '>' + ico({ inicio: 'skull', historial: 'vinyl', numeros: 'chart_bar', yo: 'user', panel: 'crown' }[x[0]]) + '<i></i>' + x[1] + '</button>'; }).join('');
     n.hidden = false;
     n.querySelectorAll('button').forEach(function (b) {
-      b.onclick = function () { TAB = b.getAttribute('data-tab'); n.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); render(); };
+      b.onclick = function () { if (b.getAttribute('data-tab') !== TAB) PREV_TABS.push(TAB); TAB = b.getAttribute('data-tab'); n.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); render(); };
     });
   }
   // 22-nov (backlog 26): la zona horaria del teléfono se guarda una vez, para que cada uno vea las horas en la suya
@@ -411,23 +412,64 @@
   }
 
   /* ---------- Ronda: votar y resultado ---------- */
+  /* 28-nov (Carlos): la barra de abajo a veces quedaba flotando en el iPhone (después del teclado o al cambiar el alto de la página).
+   * Se la obliga a volver a su sitio cuando cambia el tamaño visible, al cerrar el teclado y al volver a la app. */
+  function barraEnSitio() {
+    var n = $('tabs'); if (!n || n.hidden) return;
+    n.style.bottom = '1px'; void n.offsetHeight; n.style.bottom = '';
+  }
+  var BARRA_T = 0;
+  function barraLuego(ms) { clearTimeout(BARRA_T); BARRA_T = setTimeout(barraEnSitio, ms || 120); }
+  if (window.visualViewport) { window.visualViewport.addEventListener('resize', function () { barraLuego(); }); window.visualViewport.addEventListener('scroll', function () { barraLuego(250); }); }
+  document.addEventListener('focusout', function () { barraLuego(350); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) barraLuego(200); });
+  window.addEventListener('pageshow', function () { barraLuego(200); });
+  window.addEventListener('orientationchange', function () { barraLuego(400); });
+
+  /* 28-nov (Carlos): deslizar desde el borde izquierdo hacia la derecha = volver (como «atrás» en el iPhone).
+   * Solo en la app puesta en la pantalla de inicio: en Safari ese gesto ya es «atrás» del navegador. */
+  var PREV_TABS = [];
+  function enPantallaInicio() { try { return !!(navigator.standalone || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)); } catch (e) { return false; } }
+  function atras() {
+    var lb = document.querySelector('.lightbox'); if (lb) { var x = lb.querySelector('.x'); if (x) x.click(); else lb.remove(); return; }
+    var yt = document.getElementById('ytov'); if (yt && !yt.hidden) { var yx = document.getElementById('ytx'); if (yx) yx.click(); return; }
+    if (!$('sheet').hidden) { var b = $('back'); if (b) b.click(); else cerrarHoja(); return; }
+    var t = PREV_TABS.pop(); if (!t || t === TAB) return;
+    TAB = t; var n = $('tabs'); if (n) n.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-tab') === TAB); }); render();
+  }
+  var SW = null;
+  document.addEventListener('touchstart', function (e) {
+    SW = null; if (!enPantallaInicio() || !e.touches || e.touches.length !== 1) return;
+    var t = e.touches[0]; if (t.clientX <= 28) SW = { x: t.clientX, y: t.clientY };
+  }, { passive: true });
+  document.addEventListener('touchmove', function (e) {
+    if (!SW || !e.touches || !e.touches.length) return;
+    var t = e.touches[0], dx = t.clientX - SW.x, dy = Math.abs(t.clientY - SW.y);
+    if (dy > 60) { SW = null; return; }
+    if (dx > 70) { SW = null; atras(); }
+  }, { passive: true });
+  document.addEventListener('touchend', function () { SW = null; }, { passive: true });
+
   function abrirHoja(html) { $('sheetIn').onclick = null; $('sheetIn').innerHTML = html; $('sheet').hidden = false; $('sheet').scrollTop = 0; document.body.style.overflow = 'hidden'; }
   function cerrarHoja() { $('sheet').hidden = true; document.body.style.overflow = ''; }
   function topHoja(r) { return '<div class="top"><button class="back" id="back">‹ Volver</button><span class="k" style="margin-left:auto">' + (r && r.rotacion ? 'Ronda ' + esc(romano(r.rotacion)) : '') + '</span></div>'; }
   var RMEM = {};   // rondas ya vistas en esta visita
+  var RONDA_SEQ = 0;   // 28-nov: si llega la respuesta de una propuesta vieja (o ya se cerró la hoja), no se abre sola
   function abrirRonda(id) {
+    var seqR = ++RONDA_SEQ;
     var prev = RMEM[id] || null;
     if (prev) { CUR = prev; EDIT = false; SEL = prev.miVoto && prev.miVoto !== ABST ? prev.miVoto : ''; dibujarRonda(); }
     else { abrirHoja(topHoja() + '<div class="spin"></div>'); $('back').onclick = cerrarHoja; }
     var sel0 = SEL;
     api('api_round', id).then(function (r) {
       RMEM[id] = r;
+      if (seqR !== RONDA_SEQ || $('sheet').hidden) return;
       if (prev) {   // ya está en pantalla: solo se repinta si cambió algo y la persona no ha empezado a votar o escribir
         if ($('sheet').hidden || !CUR || CUR.id !== id || JSON.stringify(r) === JSON.stringify(prev)) return;
         if (EDIT || SEL !== sel0 || (($('com') || {}).value || '') !== (prev.miComentario || '')) return;
       }
       CUR = r; EDIT = false; SEL = r.miVoto && r.miVoto !== ABST ? r.miVoto : ''; dibujarRonda();
-    }).catch(function (e) { if (prev) return; abrirHoja(topHoja() + '<div class="err">' + esc(errMsg(e)) + '</div>'); $('back').onclick = cerrarHoja; });
+    }).catch(function (e) { if (prev || seqR !== RONDA_SEQ || $('sheet').hidden) return; abrirHoja(topHoja() + '<div class="err">' + esc(errMsg(e)) + '</div>'); $('back').onclick = cerrarHoja; });
   }
   /** Conteo: de la lista de canciones; si la ronda vino del chat (sin lista), de los votos. */
   function conteo(r) {
@@ -991,7 +1033,7 @@
     if (H.playlist) return cargarPlaylist();
     var seq = ++HSEQ, q0 = H.q;
     api('api_historial', { vista: H.vista, filtro: H.filtro, valor: H.valor, q: H.q, orden: H.orden, desde: H.items.length, n: 40 }).then(function (r) {
-      if (seq !== HSEQ || q0 !== H.q) return;
+      if (seq !== HSEQ || q0 !== H.q || TAB !== 'historial') return;
       if (r.filtros) { var redibujar = !H.filtros; H.filtros = r.filtros; if (redibujar && document.activeElement !== $('hq')) { H.total = r.total; vistaHistorial(); } }
       H.total = r.total; var antes = H.items.length; H.items = H.items.concat(r.items);
       if (!antes) H.resumen = r.resumen || null;
@@ -1173,7 +1215,7 @@
       NUM_AT = Date.now(); memoPon('numeros', s);
       if (mem && JSON.stringify(s) === JSON.stringify(mem)) { NUM = s; return; }
       if (TAB === 'numeros' && !v.querySelector('.rk-todos:not([hidden])')) pintaNum(s); else NUM = s;
-    }).catch(function (e) { if (!mem) v.innerHTML = '<div class="pagehead"><h2>Números</h2></div><div class="err">' + esc(errMsg(e)) + '</div>'; });
+    }).catch(function (e) { if (!mem && TAB === 'numeros') v.innerHTML = '<div class="pagehead"><h2>Números</h2></div><div class="err">' + esc(errMsg(e)) + '</div>'; });
   }
 
   /* ---------- Yo (6A–6G) ---------- */
@@ -1232,6 +1274,7 @@
       if (e.target.closest('#vreg')) verReglas();
     };
     api('api_me').then(function (me) {
+      if (TAB !== 'yo') return;   // 28-nov: si ya se cambió de pestaña, no se pinta
       ME = me; var p = me.perfil || {}, m = p.miembro || {}, q = p.propuestas || {};
       var h = '<div id="chal">' + chaleco(me.nombre, parchesDe(me.nombre, p, NUM)) + '</div>';   // 22-nov: el chaleco con sus parches
       if (!NUM) api('api_stats11').then(function (st) { NUM = NUM || st; var c = $('chal'); if (c && TAB === 'yo') c.innerHTML = chaleco(me.nombre, parchesDe(me.nombre, p, st)); }).catch(function () {});
@@ -1282,7 +1325,7 @@
         '<div class="note">Este es tu enlace personal: No lo compartas. Si lo pierdes, pídele uno nuevo a Chiquito.</div>' +
         '<p class="foot">' + esc(S.grupo || 'The Skull') + ' · v' + esc(S.version || '1.1') + '</p>';
       v.innerHTML = h; zonaYoActivar();
-    }).catch(function (e) { v.innerHTML = '<div class="hero"></div><div class="err">' + esc(errMsg(e)) + '</div>'; });
+    }).catch(function (e) { if (TAB === 'yo') v.innerHTML = '<div class="hero"></div><div class="err">' + esc(errMsg(e)) + '</div>'; });
   }
   var ME = null;
   /** 28-nov (backlog 26): cada uno elige su zona horaria en Yo (las horas de «Quién votó» salen en la suya). */
