@@ -1247,7 +1247,7 @@
     var bloque = function (t, xs, conWa, plegar) {   // 26-nov (Carlos): títulos grandes; ACTIVOS plegable
       if (!xs.length) return '';
       var cab = t + cnt(xs.length);
-      if (plegar) return '<details class="skgrp"><summary class="sk-h">' + cab + '</summary>' + (conWa ? '<div class="sklist">' + xs.map(fila).join('') + '</div>' : '') + '</details>';
+      if (plegar) return '<details class="skgrp"><summary class="sk-h">' + cab + '</summary>' + (conWa ? '<div class="sklist">' + xs.map(fila).join('') + '</div>' : '<p class="sknames">' + xs.map(function (x) { return '<button class="sknom" data-hm="' + esc(x.nombre) + '">' + esc(x.nombre) + '</button>'; }).join(', ') + '</p>') + '</details>';   // 28-nov: también sin WhatsApp (Exmiembros)
       return '<p class="sk-h">' + cab + '</p>' + (conWa ? '<div class="sklist">' + xs.map(fila).join('') + '</div>' : '<p class="sknames">' + xs.map(function (x) { return '<button class="sknom" data-hm="' + esc(x.nombre) + '">' + esc(x.nombre) + '</button>'; }).join(', ') + '</p>');
     };
     var act = de('activo'), pau = de('pausa'), ex = de('ex'), mem = de('memoria'), hon = CFG.HONOR;
@@ -1259,8 +1259,12 @@
         var nc = Object.keys(c).length, np = Object.keys(p).length;
         return nc ? '<p class="cr-f skdesde">🌎 Desde ' + nc + (nc === 1 ? ' ciudad' : ' ciudades') + (np > 1 ? ' en ' + np + ' países' : '') + '</p>' : '';
       })() +
-      bloque('ACTIVOS', act, true, true) + bloque('EN PAUSA', pau, true, true) + bloque('EXMIEMBROS', ex, false) +
-      (mem.length ? '<p class="sk-h">✝ EN MEMORIA' + cnt(mem.length) + '</p><p class="sknames">' + mem.map(function (x) { var b = (/«([^»]+)»/.exec(x.nombre) || [])[1] || x.nombre.split(' ')[0]; return '<button class="sknom" data-hq="' + esc(b) + '">' + esc(x.nombre) + '</button>'; }).join(', ') + '</p>' : '') +
+      bloque('ACTIVOS', act, true, true) + bloque('EN PAUSA', pau, true, true) + bloque('EXMIEMBROS', ex, false, true) +
+      (function () {   // 28-nov (Carlos): Victor «Burbuja» también en «En memoria», junto a los exmiembros que ya no están
+        var L = mem.map(function (x) { return { nombre: x.nombre, q: (/«([^»]+)»/.exec(x.nombre) || [])[1] || x.nombre.split(' ')[0] }; });
+        if (hon && hon.nombre) L.push({ nombre: hon.nombre, q: hon.buscar || hon.nombre });
+        return L.length ? '<details class="skgrp"><summary class="sk-h">✝ EN MEMORIA' + cnt(L.length) + '</summary><p class="sknames">' + L.map(function (x) { return '<button class="sknom" data-hq="' + esc(x.q) + '">' + esc(x.nombre) + '</button>'; }).join(', ') + '</p></details>' : '';
+      })() +   // 28-nov (Carlos): plegable
       '</div></div></details>';
   }
   /** 28-nov (Carlos): Pereira primero y luego todas las ciudades donde vive alguien del grupo. Salen de la hoja (Miembros › ciudad), nunca del código. */
